@@ -1,0 +1,19 @@
+# Node.js
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# WhatsApp Session (IMPORTANTE: não compartilhe esta pasta)
+auth_info_baileys/
+
+# Database
+database.db
+database.db-journal
+
+# Environment
+.env
+
+# MacOS
+.DS_Store
