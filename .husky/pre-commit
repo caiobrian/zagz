@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+echo "Running pre-commit checks..."
+
+echo "-> Biome lint + format..."
+npx lint-staged
+
+echo "-> TypeScript check..."
+npx tsc --noEmit
+
+echo "All checks passed!"

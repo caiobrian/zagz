@@ -7,7 +7,17 @@
     "dev": "tsx --watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky",
+    "lint": "biome lint ./src",
+    "format": "biome format --write ./src",
+    "check": "biome check --write ./src",
+    "typecheck": "tsc --noEmit"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -28,11 +38,14 @@
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.9",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",
     "@types/node-cron": "^3.0.11",
     "@types/pino": "^7.0.4",
     "@types/qrcode-terminal": "^0.12.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
