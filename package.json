@@ -21,6 +21,7 @@
     "better-sqlite3": "^12.8.0",
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",
+    "node-cron": "^4.2.1",
     "pino": "^10.3.1",
     "qrcode-terminal": "^0.12.0",
     "sqlite3": "^6.0.1"
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",
+    "@types/node-cron": "^3.0.11",
     "@types/pino": "^7.0.4",
     "@types/qrcode-terminal": "^0.12.2",
     "tsx": "^4.21.0",
