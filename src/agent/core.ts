@@ -1,14 +1,18 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
-import { buildSystemPrompt } from './prompt.js';
-import { sessionService } from './session.js';
-import { conversationsQueries } from '../db/queries/conversations.js';
-import { toolRegistry } from '../tools/registry.js';
+import {
+  type FunctionDeclaration,
+  type FunctionResponsePart,
+  GoogleGenerativeAI,
+} from "@google/generative-ai";
+import dotenv from "dotenv";
+import { conversationsQueries } from "../db/queries/conversations.js";
+import { toolRegistry } from "../tools/registry.js";
+import { buildSystemPrompt } from "./prompt.js";
+import { sessionService } from "./session.js";
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const MAX_TOOL_ITERATIONS = 5;
 
 /**
@@ -16,16 +20,16 @@ const MAX_TOOL_ITERATIONS = 5;
  */
 function formatForWhatsApp(text: string): string {
   const lines = text
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1\n$2')
-    .replace(/\*\*(.*?)\*\*/g, '*$1*')
-    .split('\n')
-    .map(line => line.trim())
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1\n$2")
+    .replace(/\*\*(.*?)\*\*/g, "*$1*")
+    .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
 
   const formatted: string[] = [];
   for (const line of lines) {
-    if (line.startsWith('* ') || line.startsWith('*   ')) {
-      formatted.push(`- ${line.replace(/^\*\s+/, '')}`);
+    if (line.startsWith("* ") || line.startsWith("*   ")) {
+      formatted.push(`- ${line.replace(/^\*\s+/, "")}`);
     } else {
       formatted.push(line);
     }
@@ -42,12 +46,17 @@ function formatForWhatsApp(text: string): string {
   for (let i = 0; i < deduped.length; i++) {
     result.push(deduped[i]);
     const next = deduped[i + 1];
-    if (next && (/^\d+\.\s/.test(deduped[i]) || deduped[i].startsWith('Mapa') || deduped[i].startsWith('Links:'))) {
-      result.push('');
+    if (
+      next &&
+      (/^\d+\.\s/.test(deduped[i]) ||
+        deduped[i].startsWith("Mapa") ||
+        deduped[i].startsWith("Links:"))
+    ) {
+      result.push("");
     }
   }
 
-  return result.join('\n').trim();
+  return result.join("\n").trim();
 }
 
 export const agentCore = {
@@ -66,13 +75,18 @@ export const agentCore = {
       const model = genAI.getGenerativeModel({
         model: geminiModel,
         systemInstruction: systemPrompt,
-        tools: [{ functionDeclarations: toolRegistry.getDeclarations() as any }],
+        tools: [
+          {
+            functionDeclarations:
+              toolRegistry.getDeclarations() as unknown as FunctionDeclaration[],
+          },
+        ],
       });
 
       // 4. Build chat history from recent conversations (excluding current message)
       const recentConvs = conversationsQueries.getRecent(20);
-      const chatHistory = recentConvs.map(c => ({
-        role: c.role === 'user' ? ('user' as const) : ('model' as const),
+      const chatHistory = recentConvs.map((c) => ({
+        role: c.role === "user" ? ("user" as const) : ("model" as const),
         parts: [{ text: c.content }],
       }));
 
@@ -84,49 +98,55 @@ export const agentCore = {
       // 6. Tool call loop (max MAX_TOOL_ITERATIONS to prevent infinite loops)
       let iterations = 0;
       while (iterations < MAX_TOOL_ITERATIONS) {
-        const toolCallParts = response.candidates?.[0]?.content?.parts?.filter(p => p.functionCall) ?? [];
+        const toolCallParts =
+          response.candidates?.[0]?.content?.parts?.filter((p) => p.functionCall) ?? [];
         if (toolCallParts.length === 0) break;
 
         iterations++;
-        const functionResponses = [];
+        const functionResponses: FunctionResponsePart[] = [];
 
         for (const part of toolCallParts) {
           if (!part.functionCall) continue;
           const { name, args } = part.functionCall;
-          console.log('[Agent] tool call:', name, JSON.stringify(args));
+          console.log("[Agent] tool call:", name, JSON.stringify(args));
 
           // Self-modification tools return a polite message instead of raw output
           if (
-            process.env.ALLOW_SELF_MODIFICATION === 'true' &&
-            (name === 'evolve_agent' || name === 'autonomous_action')
+            process.env.ALLOW_SELF_MODIFICATION === "true" &&
+            (name === "evolve_agent" || name === "autonomous_action")
           ) {
             await toolRegistry.execute(name, (args ?? {}) as Record<string, unknown>, session?.id);
-            const politeMsg = 'Estou terminando de preparar isso para você. Pode me enviar um "ok" ou repetir o pedido em 10 segundos?';
-            conversationsQueries.add('user', userMessage, session?.id);
-            conversationsQueries.add('assistant', politeMsg, session?.id);
+            const politeMsg =
+              'Estou terminando de preparar isso para você. Pode me enviar um "ok" ou repetir o pedido em 10 segundos?';
+            conversationsQueries.add("user", userMessage, session?.id);
+            conversationsQueries.add("assistant", politeMsg, session?.id);
             return politeMsg;
           }
 
-          const toolResult = await toolRegistry.execute(name, (args ?? {}) as Record<string, unknown>, session?.id);
+          const toolResult = await toolRegistry.execute(
+            name,
+            (args ?? {}) as Record<string, unknown>,
+            session?.id
+          );
           functionResponses.push({ functionResponse: { name, response: { content: toolResult } } });
         }
 
-        result = await chat.sendMessage(functionResponses as any);
+        result = await chat.sendMessage(functionResponses);
         response = result.response;
       }
 
       // 7. Extract final text
-      const responseText = response.text() || 'Desculpe, não consegui processar sua solicitação.';
+      const responseText = response.text() || "Desculpe, não consegui processar sua solicitação.";
       const formatted = formatForWhatsApp(responseText);
 
       // 8. Persist conversation
-      conversationsQueries.add('user', userMessage, session?.id);
-      conversationsQueries.add('assistant', formatted, session?.id);
+      conversationsQueries.add("user", userMessage, session?.id);
+      conversationsQueries.add("assistant", formatted, session?.id);
 
       return formatted;
     } catch (error) {
-      console.error('[Agent] Error handling message:', error);
-      return 'Estou processando sua solicitação, por favor aguarde um momento.';
+      console.error("[Agent] Error handling message:", error);
+      return "Estou processando sua solicitação, por favor aguarde um momento.";
     }
   },
 
@@ -140,7 +160,12 @@ export const agentCore = {
       const model = genAI.getGenerativeModel({
         model: geminiModel,
         systemInstruction: systemPrompt,
-        tools: [{ functionDeclarations: toolRegistry.getDeclarations() as any }],
+        tools: [
+          {
+            functionDeclarations:
+              toolRegistry.getDeclarations() as unknown as FunctionDeclaration[],
+          },
+        ],
       });
 
       const chat = model.startChat({ history: [] });
@@ -149,19 +174,23 @@ export const agentCore = {
 
       let iterations = 0;
       while (iterations < MAX_TOOL_ITERATIONS) {
-        const toolCallParts = response.candidates?.[0]?.content?.parts?.filter(p => p.functionCall) ?? [];
+        const toolCallParts =
+          response.candidates?.[0]?.content?.parts?.filter((p) => p.functionCall) ?? [];
         if (toolCallParts.length === 0) break;
         iterations++;
 
-        const functionResponses = [];
+        const functionResponses: FunctionResponsePart[] = [];
         for (const part of toolCallParts) {
           if (!part.functionCall) continue;
           const { name, args } = part.functionCall;
-          const toolResult = await toolRegistry.execute(name, (args ?? {}) as Record<string, unknown>);
+          const toolResult = await toolRegistry.execute(
+            name,
+            (args ?? {}) as Record<string, unknown>
+          );
           functionResponses.push({ functionResponse: { name, response: { content: toolResult } } });
         }
 
-        result = await chat.sendMessage(functionResponses as any);
+        result = await chat.sendMessage(functionResponses);
         response = result.response;
       }
 

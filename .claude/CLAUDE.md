@@ -60,7 +60,12 @@ npm run check      # Biome: lint + format + auto-fix
 npm run typecheck  # TypeScript: verifica tipos sem compilar
 ```
 
-Se qualquer um falhar, corrija os erros antes de prosseguir com o commit. O hook de pre-commit (husky) também executa esses checks automaticamente, mas a IA deve rodá-los proativamente antes de chamar `git commit`.
+**REGRA ABSOLUTA:** NUNCA execute `git commit` se `npm run check` ou `npm run typecheck` reportarem erros ou warnings. Corrija TODOS os problemas antes de prosseguir. Isso inclui:
+- Warnings do Biome (`noExplicitAny`, `noNonNullAssertion`, etc.)
+- Erros de formatação ou lint
+- Erros de tipagem TypeScript
+
+Repita o ciclo `check → corrigir → check` até que ambos os comandos terminem sem nenhum problema. Somente então execute o `git commit`. O hook de pre-commit (husky) também executa esses checks automaticamente, mas a IA deve rodá-los proativamente antes de chamar `git commit`.
 
 ## Qualidade de Código (Biome)
 - **Linter + Formatter:** Biome (`biome.json` na raiz)

@@ -1,4 +1,4 @@
-import { db } from '../client.js';
+import { db } from "../client.js";
 
 export interface Purchase {
   id: number;
@@ -8,7 +8,7 @@ export interface Purchase {
   estimated_price: string | null;
   actual_price: string | null;
   store: string | null;
-  status: 'pending' | 'confirmed' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "confirmed" | "completed" | "failed" | "cancelled";
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -22,20 +22,26 @@ export const purchasesQueries = {
     estimated_price?: string;
     store?: string;
   }): number {
-    const result = db.prepare(`
+    const result = db
+      .prepare(`
       INSERT INTO purchases (session_id, product_name, product_url, estimated_price, store)
       VALUES (?, ?, ?, ?, ?)
-    `).run(
-      data.session_id,
-      data.product_name,
-      data.product_url ?? null,
-      data.estimated_price ?? null,
-      data.store ?? null,
-    );
+    `)
+      .run(
+        data.session_id,
+        data.product_name,
+        data.product_url ?? null,
+        data.estimated_price ?? null,
+        data.store ?? null
+      );
     return result.lastInsertRowid as number;
   },
 
-  updateStatus(id: number, status: Purchase['status'], extra?: { actual_price?: string; notes?: string }): void {
+  updateStatus(
+    id: number,
+    status: Purchase["status"],
+    extra?: { actual_price?: string; notes?: string }
+  ): void {
     db.prepare(`
       UPDATE purchases
       SET status = ?, actual_price = COALESCE(?, actual_price), notes = COALESCE(?, notes), updated_at = CURRENT_TIMESTAMP
@@ -44,10 +50,12 @@ export const purchasesQueries = {
   },
 
   getPending(session_id: string): Purchase | undefined {
-    return db.prepare(`
+    return db
+      .prepare(`
       SELECT * FROM purchases WHERE session_id = ? AND status IN ('pending', 'confirmed')
       ORDER BY created_at DESC LIMIT 1
-    `).get(session_id) as Purchase | undefined;
+    `)
+      .get(session_id) as Purchase | undefined;
   },
 
   getById(id: number): Purchase | undefined {
@@ -55,8 +63,10 @@ export const purchasesQueries = {
   },
 
   list(session_id: string, limit = 10): Purchase[] {
-    return db.prepare(`
+    return db
+      .prepare(`
       SELECT * FROM purchases WHERE session_id = ? ORDER BY created_at DESC LIMIT ?
-    `).all(session_id, limit) as Purchase[];
+    `)
+      .all(session_id, limit) as Purchase[];
   },
 };

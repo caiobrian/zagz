@@ -1,15 +1,16 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+
 dotenv.config();
 
-import { mcpManager } from './mcp/client.js';
-import { toolRegistry } from './tools/registry.js';
-import { startWhatsApp, sendWhatsAppMessage } from './channels/whatsapp.js';
-import { initScheduler } from './cron/scheduler.js';
+import { sendWhatsAppMessage, startWhatsApp } from "./channels/whatsapp.js";
+import { initScheduler } from "./cron/scheduler.js";
+import { mcpManager } from "./mcp/client.js";
+import { toolRegistry } from "./tools/registry.js";
 
 // Ensure DB is initialized by importing the client
-import './db/client.js';
+import "./db/client.js";
 
-console.log('[Zagz] Starting Personal AI Agent...');
+console.log("[Zagz] Starting Personal AI Agent...");
 
 async function main() {
   try {
@@ -25,9 +26,9 @@ async function main() {
     // 4. Start WhatsApp channel
     await startWhatsApp();
 
-    console.log('[Zagz] Agent online.');
+    console.log("[Zagz] Agent online.");
   } catch (err) {
-    console.error('[Zagz] Startup error:', err);
+    console.error("[Zagz] Startup error:", err);
     process.exit(1);
   }
 }

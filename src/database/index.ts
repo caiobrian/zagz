@@ -1,10 +1,10 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import dotenv from 'dotenv';
+import path from "node:path";
+import Database from "better-sqlite3";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const dbPath = path.resolve(process.env.DATABASE_FILE || 'database.db');
+const dbPath = path.resolve(process.env.DATABASE_FILE || "database.db");
 const db = new Database(dbPath);
 
 // Criação da tabela de mensagens para histórico da IA
@@ -54,10 +54,12 @@ export const dbService = {
       ORDER BY timestamp DESC 
       LIMIT ?
     `);
-    const rows = stmt.all(remoteJid, limit) as any[];
-    return rows.reverse().map(row => ({
+    const rows = stmt.all(remoteJid, limit) as (Omit<MessageRecord, "fromMe"> & {
+      fromMe: number;
+    })[];
+    return rows.reverse().map((row) => ({
       ...row,
-      fromMe: row.fromMe === 1
+      fromMe: row.fromMe === 1,
     }));
   },
 
@@ -91,24 +93,29 @@ export const dbService = {
     return stmt.run(remoteJid, category);
   },
 
-  getUserMemories: (remoteJid: string): any[] => {
+  getUserMemories: (remoteJid: string): { category: string; content: string }[] => {
     const stmt = db.prepare(`
-      SELECT category, content FROM user_memory 
-      WHERE remoteJid = ? 
+      SELECT category, content FROM user_memory
+      WHERE remoteJid = ?
       ORDER BY timestamp DESC
     `);
-    return stmt.all(remoteJid);
+    return stmt.all(remoteJid) as { category: string; content: string }[];
   },
 
-  getLatestUserMemory: (remoteJid: string, category: string): { category: string; content: string } | null => {
+  getLatestUserMemory: (
+    remoteJid: string,
+    category: string
+  ): { category: string; content: string } | null => {
     const stmt = db.prepare(`
       SELECT category, content FROM user_memory
       WHERE remoteJid = ? AND category = ?
       ORDER BY timestamp DESC
       LIMIT 1
     `);
-    return (stmt.get(remoteJid, category) as { category: string; content: string } | undefined) || null;
-  }
+    return (
+      (stmt.get(remoteJid, category) as { category: string; content: string } | undefined) || null
+    );
+  },
 };
 
 export default db;

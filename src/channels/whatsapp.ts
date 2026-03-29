@@ -1,19 +1,19 @@
+import fs from "node:fs";
+import type { Boom } from "@hapi/boom";
 import makeWASocket, {
   areJidsSameUser,
   DisconnectReason,
-  useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
-  type WASocket,
+  useMultiFileAuthState,
   type WAMessage,
-} from '@whiskeysockets/baileys';
-import { Boom } from '@hapi/boom';
-import pino from 'pino';
-import qrcode from 'qrcode-terminal';
-import fs from 'fs';
-import { agentCore } from '../agent/core.js';
+  type WASocket,
+} from "@whiskeysockets/baileys";
+import pino from "pino";
+import qrcode from "qrcode-terminal";
+import { agentCore } from "../agent/core.js";
 
-const logger = pino({ level: 'silent' });
+const logger = pino({ level: "silent" });
 
 // Holds the active socket so cron jobs can send proactive messages
 let activeSock: WASocket | null = null;
@@ -25,7 +25,7 @@ let activeJid: string | null = null;
  */
 export async function sendWhatsAppMessage(message: string): Promise<void> {
   if (!activeSock || !activeJid) {
-    console.warn('[WA] Cannot send proactive message: no active socket or JID');
+    console.warn("[WA] Cannot send proactive message: no active socket or JID");
     return;
   }
   await activeSock.sendMessage(activeJid, { text: message });
@@ -39,15 +39,15 @@ function extractText(msg: WAMessage): string {
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
     msg.message?.imageMessage?.caption ||
-    ''
+    ""
   );
 }
 
 export async function startWhatsApp(): Promise<WASocket> {
-  const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+  const { state, saveCreds } = await useMultiFileAuthState("auth_info_baileys");
   const { version, isLatest } = await fetchLatestBaileysVersion();
 
-  console.log(`[WA] Baileys v${version.join('.')}, latest: ${isLatest}`);
+  console.log(`[WA] Baileys v${version.join(".")}, latest: ${isLatest}`);
 
   const sock: WASocket = makeWASocket({
     version,
@@ -61,17 +61,17 @@ export async function startWhatsApp(): Promise<WASocket> {
 
   activeSock = sock;
 
-  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
+  sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('[WA] Scan this QR code in WhatsApp:');
+      console.log("[WA] Scan this QR code in WhatsApp:");
       qrcode.generate(qr, { small: true });
     }
 
-    if (connection === 'close') {
+    if (connection === "close") {
       activeSock = null;
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
       const isLoggedOut = statusCode === DisconnectReason.loggedOut;
@@ -80,39 +80,50 @@ export async function startWhatsApp(): Promise<WASocket> {
       console.log(`[WA] Connection closed. Status: ${statusCode}`);
 
       if (isLoggedOut || isAuthError) {
-        console.log('[WA] Auth error — clearing session and restarting...');
+        console.log("[WA] Auth error — clearing session and restarting...");
         try {
-          if (fs.existsSync('auth_info_baileys')) {
-            fs.rmSync('auth_info_baileys', { recursive: true, force: true });
+          if (fs.existsSync("auth_info_baileys")) {
+            fs.rmSync("auth_info_baileys", { recursive: true, force: true });
           }
         } catch (err) {
-          console.error('[WA] Failed to remove auth folder:', err);
+          console.error("[WA] Failed to remove auth folder:", err);
         }
-        setTimeout(() => { void startWhatsApp(); }, 5000);
+        setTimeout(() => {
+          void startWhatsApp();
+        }, 5000);
       } else {
-        console.log('[WA] Reconnecting in 5s...');
-        setTimeout(() => { void startWhatsApp(); }, 5000);
+        console.log("[WA] Reconnecting in 5s...");
+        setTimeout(() => {
+          void startWhatsApp();
+        }, 5000);
       }
-    } else if (connection === 'open') {
+    } else if (connection === "open") {
       activeSock = sock;
-      console.log('[WA] Connected. Agent is online.', {
+      console.log("[WA] Connected. Agent is online.", {
         id: sock.user?.id,
         phoneNumber: sock.user?.phoneNumber,
       });
     }
   });
 
-  sock.ev.on('messages.upsert', async (m) => {
-    if (m.type !== 'notify' && m.type !== 'append') return;
+  sock.ev.on("messages.upsert", async (m) => {
+    if (m.type !== "notify" && m.type !== "append") return;
 
     for (const msg of m.messages) {
       const remoteJid = msg.key.remoteJid;
       if (!remoteJid || !msg.message) continue;
 
       // Single-user: only handle messages sent by ourselves in our own chat
-      const candidateJids = [remoteJid, msg.key.remoteJidAlt, msg.key.participant, msg.key.participantAlt].filter((j): j is string => !!j);
-      const myJids = [sock.user?.id, sock.user?.lid, sock.user?.phoneNumber].filter((j): j is string => !!j);
-      const isSelfChat = candidateJids.some(j => myJids.some(mj => areJidsSameUser(j, mj)));
+      const candidateJids = [
+        remoteJid,
+        msg.key.remoteJidAlt,
+        msg.key.participant,
+        msg.key.participantAlt,
+      ].filter((j): j is string => !!j);
+      const myJids = [sock.user?.id, sock.user?.lid, sock.user?.phoneNumber].filter(
+        (j): j is string => !!j
+      );
+      const isSelfChat = candidateJids.some((j) => myJids.some((mj) => areJidsSameUser(j, mj)));
       const hasQuotedContext = !!(
         msg.message.extendedTextMessage?.contextInfo?.quotedMessage ||
         msg.message.imageMessage?.contextInfo?.quotedMessage
@@ -126,18 +137,18 @@ export async function startWhatsApp(): Promise<WASocket> {
       // Remember the JID for proactive messaging
       activeJid = remoteJid;
 
-      console.log('[WA] Incoming message:', { remoteJid, userMessage });
+      console.log("[WA] Incoming message:", { remoteJid, userMessage });
 
       await sock.presenceSubscribe(remoteJid);
-      await sock.sendPresenceUpdate('composing', remoteJid);
+      await sock.sendPresenceUpdate("composing", remoteJid);
 
       try {
         const response = await agentCore.handleMessage(userMessage);
         await sock.sendMessage(remoteJid, { text: response }, { quoted: msg as WAMessage });
       } catch (error) {
-        console.error('[WA] Error handling message:', error);
+        console.error("[WA] Error handling message:", error);
       } finally {
-        await sock.sendPresenceUpdate('paused', remoteJid);
+        await sock.sendPresenceUpdate("paused", remoteJid);
       }
     }
   });

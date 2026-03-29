@@ -28,8 +28,8 @@ const shouldUseAdvancedSearch = (query: string) => {
     "sessao",
     "sessão",
     "ingresso",
-    "shopping"
-  ].some(term => normalized.includes(term));
+    "shopping",
+  ].some((term) => normalized.includes(term));
 };
 
 export const tavilySearchTool = {
@@ -41,15 +41,15 @@ export const tavilySearchTool = {
     properties: {
       query: {
         type: "STRING",
-        description: "Consulta de busca atual na web."
+        description: "Consulta de busca atual na web.",
       },
       topic: {
         type: "STRING",
         enum: ["general", "news"],
-        description: "Use 'news' para noticias e 'general' para buscas gerais."
-      }
+        description: "Use 'news' para noticias e 'general' para buscas gerais.",
+      },
     },
-    required: ["query"]
+    required: ["query"],
   },
 
   execute: async (args: { query: string; topic?: "general" | "news" }) => {
@@ -74,14 +74,14 @@ export const tavilySearchTool = {
           max_results: 5,
           include_answer: true,
           include_raw_content: false,
-          ...(searchDepth === "advanced" ? { chunks_per_source: 3 } : {})
+          ...(searchDepth === "advanced" ? { chunks_per_source: 3 } : {}),
         },
         {
           timeout: 30000,
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`
-          }
+            Authorization: `Bearer ${apiKey}`,
+          },
         }
       );
 
@@ -119,5 +119,5 @@ export const tavilySearchTool = {
       console.error("[Tavily] erro na busca:", error);
       return "A busca web estruturada falhou no momento. Tente novamente em instantes.";
     }
-  }
+  },
 };
