@@ -1,14 +1,12 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import Database from "better-sqlite3";
 
-const DB_PATH = process.env.DATABASE_FILE || 'database.db';
+const DB_PATH = process.env.DATABASE_FILE || "database.db";
 
 export const db = new Database(DB_PATH);
 
 // WAL mode for better performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS memories (

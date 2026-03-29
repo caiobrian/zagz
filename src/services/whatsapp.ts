@@ -1,17 +1,15 @@
-import makeWASocket, { 
+import fs from "node:fs";
+import type { Boom } from "@hapi/boom";
+import makeWASocket, {
   areJidsSameUser,
-  DisconnectReason, 
-  useMultiFileAuthState, 
-  fetchLatestBaileysVersion, 
+  DisconnectReason,
+  fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  useMultiFileAuthState,
   type WASocket,
-  type proto
 } from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
 import pino from "pino";
 import qrcode from "qrcode-terminal";
-import path from "path";
-import fs from "fs";
 import { handleMessage } from "../handlers/message.js";
 
 const logger = pino({ level: "silent" });
@@ -45,11 +43,18 @@ export const startWhatsApp = async () => {
     if (connection === "close") {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-      
-      console.log(`Conexão fechada. Motivo: ${statusCode}. Tentando reconectar? ${shouldReconnect}`);
-      
+
+      console.log(
+        `Conexão fechada. Motivo: ${statusCode}. Tentando reconectar? ${shouldReconnect}`
+      );
+
       // Se for erro de autenticação (401, 403) ou expirou (440) ou logout definitivo
-      if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403 || statusCode === 440) {
+      if (
+        statusCode === DisconnectReason.loggedOut ||
+        statusCode === 401 ||
+        statusCode === 403 ||
+        statusCode === 440
+      ) {
         console.log("Erro de autenticação crítico ou LoggedOut. Limpando sessão...");
         try {
           if (fs.existsSync("auth_info_baileys")) {
@@ -59,7 +64,7 @@ export const startWhatsApp = async () => {
         } catch (err) {
           console.error("Falha ao remover pasta de autenticação:", err);
         }
-        
+
         console.log("Reiniciando em 5 segundos para gerar novo QR Code...");
         setTimeout(() => {
           startWhatsApp();
@@ -77,7 +82,7 @@ export const startWhatsApp = async () => {
       console.log("[WA] sessao autenticada", {
         id: sock.user?.id,
         lid: sock.user?.lid,
-        phoneNumber: sock.user?.phoneNumber
+        phoneNumber: sock.user?.phoneNumber,
       });
       console.log("Conexão estabelecida com sucesso! O agente de IA está online.");
     }
@@ -86,7 +91,7 @@ export const startWhatsApp = async () => {
   sock.ev.on("messages.upsert", async (m) => {
     console.log("[WA] messages.upsert", {
       type: m.type,
-      count: m.messages.length
+      count: m.messages.length,
     });
 
     if (m.type === "notify" || m.type === "append") {
@@ -96,15 +101,13 @@ export const startWhatsApp = async () => {
           msg.key.remoteJid,
           msg.key.remoteJidAlt,
           msg.key.participant,
-          msg.key.participantAlt
+          msg.key.participantAlt,
         ].filter((jid): jid is string => !!jid);
-        const myJids = [
-          sock.user?.id,
-          sock.user?.lid,
-          sock.user?.phoneNumber
-        ].filter((jid): jid is string => !!jid);
-        const isSelfChat = candidateChatJids.some(chatJid =>
-          myJids.some(myJid => areJidsSameUser(chatJid, myJid))
+        const myJids = [sock.user?.id, sock.user?.lid, sock.user?.phoneNumber].filter(
+          (jid): jid is string => !!jid
+        );
+        const isSelfChat = candidateChatJids.some((chatJid) =>
+          myJids.some((myJid) => areJidsSameUser(chatJid, myJid))
         );
         const hasQuotedContext = !!(
           msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
@@ -124,7 +127,7 @@ export const startWhatsApp = async () => {
           hasQuotedContext,
           isSelfAuthoredUserInput,
           shouldHandle,
-          hasMessage: !!msg.message
+          hasMessage: !!msg.message,
         });
 
         if (shouldHandle) {

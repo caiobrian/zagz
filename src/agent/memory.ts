@@ -1,10 +1,10 @@
-import { memoriesQueries, type Memory } from '../db/queries/memories.js';
+import { type Memory, memoriesQueries } from "../db/queries/memories.js";
 
-export type MemoryCategory = 'finance' | 'projects' | 'preferences' | 'routine' | string;
+export type MemoryCategory = "finance" | "projects" | "preferences" | "routine" | string;
 
 export const memoryService = {
   set(key: string, value: unknown, category?: MemoryCategory): void {
-    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    const serialized = typeof value === "string" ? value : JSON.stringify(value);
     memoriesQueries.upsert(key, serialized, category);
   },
 
@@ -36,24 +36,24 @@ export const memoryService = {
    */
   formatForPrompt(): string {
     const memories = memoriesQueries.getAll();
-    if (memories.length === 0) return '(nenhuma memória registrada ainda)';
+    if (memories.length === 0) return "(nenhuma memória registrada ainda)";
 
     const byCategory: Record<string, string[]> = {};
     for (const mem of memories) {
-      const cat = mem.category ?? 'geral';
+      const cat = mem.category ?? "geral";
       if (!byCategory[cat]) byCategory[cat] = [];
       // Sanitiza valores para prevenir prompt injection: remove sequências que podem
       // escapar delimitadores XML ou injetar instruções no sistema
       const safeValue = mem.value
-        .replace(/<\|/g, '< |')
-        .replace(/\]\]\s*>/g, ']] >')
-        .replace(/---+/g, '--')
-        .replace(/#+\s*(SYSTEM|INSTRUÇÃO|INSTRUCTION|IGNORE)/gi, '# [redacted]');
+        .replace(/<\|/g, "< |")
+        .replace(/\]\]\s*>/g, "]] >")
+        .replace(/---+/g, "--")
+        .replace(/#+\s*(SYSTEM|INSTRUÇÃO|INSTRUCTION|IGNORE)/gi, "# [redacted]");
       byCategory[cat].push(`- ${mem.key}: ${safeValue}`);
     }
 
     return Object.entries(byCategory)
-      .map(([cat, lines]) => `### ${cat}\n${lines.join('\n')}`)
-      .join('\n\n');
+      .map(([cat, lines]) => `### ${cat}\n${lines.join("\n")}`)
+      .join("\n\n");
   },
 };

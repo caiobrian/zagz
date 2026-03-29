@@ -1,4 +1,4 @@
-import { type WASocket, type proto, type WAMessage } from "@whiskeysockets/baileys";
+import type { proto, WAMessage, WASocket } from "@whiskeysockets/baileys";
 import { aiService } from "../services/ai.js";
 
 export const handleMessage = async (sock: WASocket, m: proto.IWebMessageInfo) => {
@@ -6,15 +6,16 @@ export const handleMessage = async (sock: WASocket, m: proto.IWebMessageInfo) =>
   if (!remoteJid) return;
 
   // Extrair o conteúdo da mensagem (texto simples)
-  const userMessage = m.message?.conversation || 
-                      m.message?.extendedTextMessage?.text || 
-                      m.message?.imageMessage?.caption || 
-                      "";
+  const userMessage =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    m.message?.imageMessage?.caption ||
+    "";
 
   console.log("[Handler] mensagem extraida", {
     remoteJid,
     fromMe: m.key?.fromMe,
-    userMessage
+    userMessage,
   });
 
   if (!userMessage) return;

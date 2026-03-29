@@ -1,15 +1,15 @@
-import { purchasesQueries } from '../db/queries/purchases.js';
+import { purchasesQueries } from "../db/queries/purchases.js";
 
 // ──────────────────────────────────────────────
 // get_payment_credentials
 // ──────────────────────────────────────────────
 export const getPaymentCredentialsTool = {
-  name: 'get_payment_credentials',
+  name: "get_payment_credentials",
   description:
-    'Retorna os dados do cartão de crédito do usuário para preencher formulários de pagamento. ' +
-    'Use SOMENTE no momento de preencher o checkout. NUNCA exiba esses dados nas mensagens ao usuário.',
+    "Retorna os dados do cartão de crédito do usuário para preencher formulários de pagamento. " +
+    "Use SOMENTE no momento de preencher o checkout. NUNCA exiba esses dados nas mensagens ao usuário.",
   parameters: {
-    type: 'OBJECT',
+    type: "OBJECT",
     properties: {},
     required: [],
   },
@@ -26,7 +26,7 @@ export const getPaymentCredentialsTool = {
     const state = process.env.CARD_BILLING_STATE;
 
     if (!number || !holder || !month || !year || !cvv) {
-      return 'Erro: dados do cartão não configurados. Configure as variáveis CARD_NUMBER, CARD_HOLDER_NAME, CARD_EXPIRY_MONTH, CARD_EXPIRY_YEAR e CARD_CVV no arquivo .env.';
+      return "Erro: dados do cartão não configurados. Configure as variáveis CARD_NUMBER, CARD_HOLDER_NAME, CARD_EXPIRY_MONTH, CARD_EXPIRY_YEAR e CARD_CVV no arquivo .env.";
     }
 
     return JSON.stringify({
@@ -35,11 +35,11 @@ export const getPaymentCredentialsTool = {
       expiry_month: month,
       expiry_year: year,
       cvv,
-      cpf: cpf ?? '',
-      billing_zip: zip ?? '',
-      billing_address: address ?? '',
-      billing_city: city ?? '',
-      billing_state: state ?? '',
+      cpf: cpf ?? "",
+      billing_zip: zip ?? "",
+      billing_address: address ?? "",
+      billing_city: city ?? "",
+      billing_state: state ?? "",
     });
   },
 };
@@ -48,21 +48,21 @@ export const getPaymentCredentialsTool = {
 // initiate_purchase
 // ──────────────────────────────────────────────
 export const initiatePurchaseTool = {
-  name: 'initiate_purchase',
+  name: "initiate_purchase",
   description:
-    'Inicia um fluxo de compra e aguarda confirmação do usuário. ' +
-    'Chame esta ferramenta após identificar o produto e o preço no site. ' +
-    'Ela salva a compra como pendente e retorna uma mensagem de confirmação para enviar ao usuário.',
+    "Inicia um fluxo de compra e aguarda confirmação do usuário. " +
+    "Chame esta ferramenta após identificar o produto e o preço no site. " +
+    "Ela salva a compra como pendente e retorna uma mensagem de confirmação para enviar ao usuário.",
   parameters: {
-    type: 'OBJECT',
+    type: "OBJECT",
     properties: {
-      session_id: { type: 'STRING', description: 'ID da sessão atual' },
-      product_name: { type: 'STRING', description: 'Nome do produto a ser comprado' },
-      product_url: { type: 'STRING', description: 'URL da página do produto ou checkout' },
-      estimated_price: { type: 'STRING', description: 'Preço estimado (ex: "R$ 120,00")' },
-      store: { type: 'STRING', description: 'Nome da loja ou site' },
+      session_id: { type: "STRING", description: "ID da sessão atual" },
+      product_name: { type: "STRING", description: "Nome do produto a ser comprado" },
+      product_url: { type: "STRING", description: "URL da página do produto ou checkout" },
+      estimated_price: { type: "STRING", description: 'Preço estimado (ex: "R$ 120,00")' },
+      store: { type: "STRING", description: "Nome da loja ou site" },
     },
-    required: ['session_id', 'product_name'],
+    required: ["session_id", "product_name"],
   },
   execute(args: {
     session_id: string;
@@ -84,7 +84,7 @@ export const initiatePurchaseTool = {
       `Responda *sim* para confirmar ou *não* para cancelar.`,
     ].filter(Boolean);
 
-    return JSON.stringify({ purchase_id: id, confirmation_message: lines.join('\n') });
+    return JSON.stringify({ purchase_id: id, confirmation_message: lines.join("\n") });
   },
 };
 
@@ -92,23 +92,24 @@ export const initiatePurchaseTool = {
 // confirm_purchase
 // ──────────────────────────────────────────────
 export const confirmPurchaseTool = {
-  name: 'confirm_purchase',
+  name: "confirm_purchase",
   description:
-    'Marca uma compra pendente como confirmada pelo usuário. ' +
+    "Marca uma compra pendente como confirmada pelo usuário. " +
     'Chame após o usuário responder "sim". Depois prossiga para preencher o checkout.',
   parameters: {
-    type: 'OBJECT',
+    type: "OBJECT",
     properties: {
-      purchase_id: { type: 'NUMBER', description: 'ID da compra retornado por initiate_purchase' },
+      purchase_id: { type: "NUMBER", description: "ID da compra retornado por initiate_purchase" },
     },
-    required: ['purchase_id'],
+    required: ["purchase_id"],
   },
   execute(args: { purchase_id: number }): string {
     const purchase = purchasesQueries.getById(args.purchase_id);
     if (!purchase) return `Compra #${args.purchase_id} não encontrada.`;
-    if (purchase.status !== 'pending') return `Compra #${args.purchase_id} está com status "${purchase.status}", não pode ser confirmada.`;
+    if (purchase.status !== "pending")
+      return `Compra #${args.purchase_id} está com status "${purchase.status}", não pode ser confirmada.`;
 
-    purchasesQueries.updateStatus(args.purchase_id, 'confirmed');
+    purchasesQueries.updateStatus(args.purchase_id, "confirmed");
     return `Compra #${args.purchase_id} confirmada. Prossiga para o checkout.`;
   },
 };
@@ -117,34 +118,42 @@ export const confirmPurchaseTool = {
 // complete_purchase
 // ──────────────────────────────────────────────
 export const completePurchaseTool = {
-  name: 'complete_purchase',
+  name: "complete_purchase",
   description:
-    'Registra o resultado final de uma compra (sucesso ou falha). ' +
-    'Chame após concluir ou falhar o checkout.',
+    "Registra o resultado final de uma compra (sucesso ou falha). " +
+    "Chame após concluir ou falhar o checkout.",
   parameters: {
-    type: 'OBJECT',
+    type: "OBJECT",
     properties: {
-      purchase_id: { type: 'NUMBER', description: 'ID da compra' },
-      success: { type: 'BOOLEAN', description: 'true se a compra foi concluída, false se falhou' },
-      actual_price: { type: 'STRING', description: 'Preço cobrado (se disponível)' },
-      notes: { type: 'STRING', description: 'Observações (ex: número do pedido, mensagem de erro)' },
+      purchase_id: { type: "NUMBER", description: "ID da compra" },
+      success: { type: "BOOLEAN", description: "true se a compra foi concluída, false se falhou" },
+      actual_price: { type: "STRING", description: "Preço cobrado (se disponível)" },
+      notes: {
+        type: "STRING",
+        description: "Observações (ex: número do pedido, mensagem de erro)",
+      },
     },
-    required: ['purchase_id', 'success'],
+    required: ["purchase_id", "success"],
   },
-  execute(args: { purchase_id: number; success: boolean; actual_price?: string; notes?: string }): string {
+  execute(args: {
+    purchase_id: number;
+    success: boolean;
+    actual_price?: string;
+    notes?: string;
+  }): string {
     const purchase = purchasesQueries.getById(args.purchase_id);
     if (!purchase) return `Compra #${args.purchase_id} não encontrada.`;
 
-    const status = args.success ? 'completed' : 'failed';
+    const status = args.success ? "completed" : "failed";
     purchasesQueries.updateStatus(args.purchase_id, status, {
       actual_price: args.actual_price,
       notes: args.notes,
     });
 
     if (args.success) {
-      return `✅ Compra #${args.purchase_id} concluída!${args.actual_price ? ` Valor: ${args.actual_price}.` : ''}${args.notes ? ` ${args.notes}` : ''}`;
+      return `✅ Compra #${args.purchase_id} concluída!${args.actual_price ? ` Valor: ${args.actual_price}.` : ""}${args.notes ? ` ${args.notes}` : ""}`;
     } else {
-      return `❌ Compra #${args.purchase_id} falhou.${args.notes ? ` Motivo: ${args.notes}` : ''}`;
+      return `❌ Compra #${args.purchase_id} falhou.${args.notes ? ` Motivo: ${args.notes}` : ""}`;
     }
   },
 };
@@ -153,23 +162,23 @@ export const completePurchaseTool = {
 // cancel_purchase
 // ──────────────────────────────────────────────
 export const cancelPurchaseTool = {
-  name: 'cancel_purchase',
-  description: 'Cancela uma compra pendente ou confirmada.',
+  name: "cancel_purchase",
+  description: "Cancela uma compra pendente ou confirmada.",
   parameters: {
-    type: 'OBJECT',
+    type: "OBJECT",
     properties: {
-      purchase_id: { type: 'NUMBER', description: 'ID da compra a cancelar' },
+      purchase_id: { type: "NUMBER", description: "ID da compra a cancelar" },
     },
-    required: ['purchase_id'],
+    required: ["purchase_id"],
   },
   execute(args: { purchase_id: number }): string {
     const purchase = purchasesQueries.getById(args.purchase_id);
     if (!purchase) return `Compra #${args.purchase_id} não encontrada.`;
-    if (!['pending', 'confirmed'].includes(purchase.status)) {
+    if (!["pending", "confirmed"].includes(purchase.status)) {
       return `Compra #${args.purchase_id} não pode ser cancelada (status: ${purchase.status}).`;
     }
 
-    purchasesQueries.updateStatus(args.purchase_id, 'cancelled');
+    purchasesQueries.updateStatus(args.purchase_id, "cancelled");
     return `Compra #${args.purchase_id} cancelada.`;
   },
 };

@@ -1,6 +1,11 @@
-import { sessionsQueries, type Session, type SessionState, type SessionFlow } from '../db/queries/sessions.js';
+import {
+  type Session,
+  type SessionFlow,
+  type SessionState,
+  sessionsQueries,
+} from "../db/queries/sessions.js";
 
-export { type Session, type SessionState, type SessionFlow };
+export type { Session, SessionFlow, SessionState };
 
 export const sessionService = {
   getActive(): Session | undefined {
@@ -11,7 +16,10 @@ export const sessionService = {
     return sessionsQueries.create(flow, context);
   },
 
-  update(id: string, fields: { state?: SessionState; flow?: SessionFlow; context?: object | null }): void {
+  update(
+    id: string,
+    fields: { state?: SessionState; flow?: SessionFlow; context?: object | null }
+  ): void {
     sessionsQueries.update(id, fields);
   },
 
@@ -36,10 +44,10 @@ export const sessionService = {
    * Format session state for system prompt injection.
    */
   formatForPrompt(session: Session | undefined): string {
-    if (!session || session.state === 'idle') {
-      return 'Nenhum fluxo ativo no momento.';
+    if (!session || session.state === "idle") {
+      return "Nenhum fluxo ativo no momento.";
     }
-    const ctx = session.context ? session.context : '{}';
-    return `Fluxo: ${session.flow ?? 'genérico'} | Estado: ${session.state}\nContexto: ${ctx}`;
+    const ctx = session.context ? session.context : "{}";
+    return `Fluxo: ${session.flow ?? "genérico"} | Estado: ${session.state}\nContexto: ${ctx}`;
   },
 };

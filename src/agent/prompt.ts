@@ -1,7 +1,7 @@
-import { memoryService } from './memory.js';
-import { sessionService, type Session } from './session.js';
+import { memoryService } from "./memory.js";
+import { type Session, sessionService } from "./session.js";
 
-const USER_NAME = process.env.USER_NAME || 'usuário';
+const USER_NAME = process.env.USER_NAME || "usuário";
 
 export function buildSystemPrompt(session: Session | undefined): string {
   const memoriesBlock = memoryService.formatForPrompt();

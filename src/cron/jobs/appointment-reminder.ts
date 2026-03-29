@@ -1,15 +1,15 @@
-import { appointmentsQueries } from '../../db/queries/appointments.js';
+import { appointmentsQueries } from "../../db/queries/appointments.js";
 
 function formatTime(isoString: string): string {
   try {
-    const d = new Date(isoString.includes('T') ? isoString : isoString.replace(' ', 'T'));
-    return d.toLocaleString('pt-BR', {
-      timeZone: process.env.TZ || 'America/Sao_Paulo',
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
+    const d = new Date(isoString.includes("T") ? isoString : isoString.replace(" ", "T"));
+    return d.toLocaleString("pt-BR", {
+      timeZone: process.env.TZ || "America/Sao_Paulo",
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return isoString;

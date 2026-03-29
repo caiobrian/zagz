@@ -1,4 +1,4 @@
-import { db } from '../client.js';
+import { db } from "../client.js";
 
 export interface Memory {
   key: string;
@@ -20,18 +20,18 @@ export const memoriesQueries = {
   },
 
   get(key: string): Memory | undefined {
-    return db.prepare('SELECT * FROM memories WHERE key = ?').get(key) as Memory | undefined;
+    return db.prepare("SELECT * FROM memories WHERE key = ?").get(key) as Memory | undefined;
   },
 
   getAll(): Memory[] {
-    return db.prepare('SELECT * FROM memories ORDER BY category, key').all() as Memory[];
+    return db.prepare("SELECT * FROM memories ORDER BY category, key").all() as Memory[];
   },
 
   getByCategory(category: string): Memory[] {
-    return db.prepare('SELECT * FROM memories WHERE category = ?').all(category) as Memory[];
+    return db.prepare("SELECT * FROM memories WHERE category = ?").all(category) as Memory[];
   },
 
   delete(key: string): void {
-    db.prepare('DELETE FROM memories WHERE key = ?').run(key);
+    db.prepare("DELETE FROM memories WHERE key = ?").run(key);
   },
 };

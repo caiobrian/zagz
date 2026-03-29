@@ -39,7 +39,7 @@ const serviceTypeMap: Record<string, string> = {
   restaurante: "restaurant",
   farmacia: "pharmacy",
   mercado: "supermarket",
-  oficina: "car_repair"
+  oficina: "car_repair",
 };
 
 export const placesSearchTool = {
@@ -52,18 +52,19 @@ export const placesSearchTool = {
       serviceType: {
         type: "STRING",
         enum: ["lava_rapido", "cinema", "restaurante", "farmacia", "mercado", "oficina"],
-        description: "Tipo do lugar procurado."
+        description: "Tipo do lugar procurado.",
       },
       textQuery: {
         type: "STRING",
-        description: "Consulta textual especifica, como 'feijoada', 'rodizio', 'ramen' ou 'lava rapido 24 horas'."
+        description:
+          "Consulta textual especifica, como 'feijoada', 'rodizio', 'ramen' ou 'lava rapido 24 horas'.",
       },
       locationQuery: {
         type: "STRING",
-        description: "CEP, bairro, cidade ou endereco usado como referencia geográfica."
-      }
+        description: "CEP, bairro, cidade ou endereco usado como referencia geográfica.",
+      },
     },
-    required: ["locationQuery"]
+    required: ["locationQuery"],
   },
 
   execute: async (args: { serviceType?: string; textQuery?: string; locationQuery: string }) => {
@@ -81,27 +82,30 @@ export const placesSearchTool = {
           params: {
             address: args.locationQuery,
             key: apiKey,
-            region: "br"
+            region: "br",
           },
-          timeout: 30000
+          timeout: 30000,
         }
       );
 
       const location = geocodeResponse.data.results?.[0]?.geometry?.location;
-      const formattedAddress = geocodeResponse.data.results?.[0]?.formatted_address || args.locationQuery;
+      const formattedAddress =
+        geocodeResponse.data.results?.[0]?.formatted_address || args.locationQuery;
 
       if (!location) {
         return "Nao consegui localizar esse CEP/endereco para buscar lugares proximos.";
       }
 
-      const includedType = args.serviceType ? (serviceTypeMap[args.serviceType] || args.serviceType) : undefined;
+      const includedType = args.serviceType
+        ? serviceTypeMap[args.serviceType] || args.serviceType
+        : undefined;
       const textQuery = args.textQuery?.trim();
 
       console.log("[Places] search", {
         serviceType: args.serviceType,
         includedType,
         textQuery,
-        formattedAddress
+        formattedAddress,
       });
 
       const placesResponse = textQuery
@@ -114,12 +118,12 @@ export const placesSearchTool = {
                 circle: {
                   center: {
                     latitude: location.lat,
-                    longitude: location.lng
+                    longitude: location.lng,
                   },
-                  radius: 5000
-                }
+                  radius: 5000,
+                },
               },
-              ...(includedType ? { includedType } : {})
+              ...(includedType ? { includedType } : {}),
             },
             {
               timeout: 30000,
@@ -127,8 +131,8 @@ export const placesSearchTool = {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": apiKey,
                 "X-Goog-FieldMask":
-                  "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.googleMapsUri,places.websiteUri,places.regularOpeningHours.openNow"
-              }
+                  "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.googleMapsUri,places.websiteUri,places.regularOpeningHours.openNow",
+              },
             }
           )
         : await axios.post<PlacesSearchResponse>(
@@ -141,11 +145,11 @@ export const placesSearchTool = {
                 circle: {
                   center: {
                     latitude: location.lat,
-                    longitude: location.lng
+                    longitude: location.lng,
                   },
-                  radius: 5000
-                }
-              }
+                  radius: 5000,
+                },
+              },
             },
             {
               timeout: 30000,
@@ -153,8 +157,8 @@ export const placesSearchTool = {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": apiKey,
                 "X-Goog-FieldMask":
-                  "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.googleMapsUri,places.websiteUri,places.regularOpeningHours.openNow"
-              }
+                  "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.googleMapsUri,places.websiteUri,places.regularOpeningHours.openNow",
+              },
             }
           );
 
@@ -164,14 +168,17 @@ export const placesSearchTool = {
       }
 
       const rankedPlaces = places
-        .filter(place => (place.rating ?? 0) >= 3.5 || (place.userRatingCount ?? 0) >= 8)
+        .filter((place) => (place.rating ?? 0) >= 3.5 || (place.userRatingCount ?? 0) >= 8)
         .sort((a, b) => {
           const scoreA = (a.rating ?? 0) * 100 + Math.min(a.userRatingCount ?? 0, 200);
           const scoreB = (b.rating ?? 0) * 100 + Math.min(b.userRatingCount ?? 0, 200);
           return scoreB - scoreA;
         });
 
-      const selectedPlaces: PlaceResult[] = (rankedPlaces.length > 0 ? rankedPlaces : places).slice(0, 5);
+      const selectedPlaces: PlaceResult[] = (rankedPlaces.length > 0 ? rankedPlaces : places).slice(
+        0,
+        5
+      );
 
       const lines: string[] = [];
       lines.push("BUSCA_LUGARES_PROXIMOS");
@@ -213,12 +220,12 @@ export const placesSearchTool = {
           message: error.message,
           code: error.code,
           status: error.response?.status,
-          data: error.response?.data
+          data: error.response?.data,
         });
       } else {
         console.error("[Places] erro na busca:", error);
       }
       return "A busca de lugares proximos falhou no momento. Tente novamente em instantes.";
     }
-  }
+  },
 };

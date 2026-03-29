@@ -1,15 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 import { dbService } from "../database/index.js";
 import { mcpManager } from "../mcp/client.js";
-import { selfEvolutionTool } from "../tools/selfEvolution.js";
 import { autonomousTool } from "../tools/autonomous.js";
 import { placesSearchTool } from "../tools/placesSearch.js";
+import { selfEvolutionTool } from "../tools/selfEvolution.js";
 import { tavilySearchTool } from "../tools/tavilySearch.js";
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const allowSelfModification = process.env.ALLOW_SELF_MODIFICATION === "true";
 
@@ -27,7 +27,7 @@ const localIntentPatterns = [
   /onde posso ir/i,
   /onde tem/i,
   /mais pr[oó]ximo/i,
-  /pr[oó]ximo de mim/i
+  /pr[oó]ximo de mim/i,
 ];
 
 const locationReplyPatterns = [
@@ -37,7 +37,7 @@ const locationReplyPatterns = [
   /\bru?a\b/i,
   /\bavenida\b/i,
   /\bsp\b/i,
-  /\bs[aã]o paulo\b/i
+  /\bs[aã]o paulo\b/i,
 ];
 
 const serviceSearchPatterns = [
@@ -48,12 +48,13 @@ const serviceSearchPatterns = [
   /mercado/i,
   /farm[aá]cia/i,
   /posto/i,
-  /oficina/i
+  /oficina/i,
 ];
 
 const inferServiceType = (message: string) => {
   const normalized = message.toLowerCase();
-  if (normalized.includes("lava") || normalized.includes("lavar") || normalized.includes("carro")) return "lava_rapido";
+  if (normalized.includes("lava") || normalized.includes("lavar") || normalized.includes("carro"))
+    return "lava_rapido";
   if (normalized.includes("cinema") || normalized.includes("filme")) return "cinema";
   if (normalized.includes("restaurante") || normalized.includes("comer")) return "restaurante";
   if (normalized.includes("farmacia")) return "farmacia";
@@ -68,7 +69,7 @@ const serviceQueryMap: Record<string, string> = {
   restaurante: "restaurante",
   farmacia: "farmacia",
   mercado: "mercado",
-  oficina: "oficina"
+  oficina: "oficina",
 };
 
 const buildNearbyTextQuery = (originalMessage: string, serviceType?: string) => {
@@ -80,14 +81,17 @@ const buildNearbyTextQuery = (originalMessage: string, serviceType?: string) => 
 };
 
 const isLocalIntent = (message: string) =>
-  localIntentPatterns.some(pattern => pattern.test(message));
+  localIntentPatterns.some((pattern) => pattern.test(message));
 
 const looksLikeLocationReply = (message: string) =>
-  locationReplyPatterns.some(pattern => pattern.test(message)) ||
-  (!!message.trim() && message.trim().length >= 3 && message.trim().length <= 80 && !message.includes("?"));
+  locationReplyPatterns.some((pattern) => pattern.test(message)) ||
+  (!!message.trim() &&
+    message.trim().length >= 3 &&
+    message.trim().length <= 80 &&
+    !message.includes("?"));
 
 const isServiceSearch = (message: string) =>
-  serviceSearchPatterns.some(pattern => pattern.test(message));
+  serviceSearchPatterns.some((pattern) => pattern.test(message));
 
 const retryIntentPatterns = [
   /^ok$/i,
@@ -98,11 +102,11 @@ const retryIntentPatterns = [
   /^ta bom$/i,
   /^t[aá] bom$/i,
   /^tenta de novo$/i,
-  /^de novo$/i
+  /^de novo$/i,
 ];
 
 const wantsRetry = (message: string) =>
-  retryIntentPatterns.some(pattern => pattern.test(message.trim()));
+  retryIntentPatterns.some((pattern) => pattern.test(message.trim()));
 
 const normalizeCep = (message: string) => {
   const digits = message.replace(/\D/g, "");
@@ -113,13 +117,13 @@ const normalizeCep = (message: string) => {
 const formatSearchToolFallback = (toolResult: string) => {
   const lines = toolResult
     .split("\n")
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
-  const summary = lines.find(line => line.startsWith("Resumo:"));
+  const summary = lines.find((line) => line.startsWith("Resumo:"));
   const urls = lines
-    .filter(line => line.startsWith("URL:"))
-    .map(line => line.replace(/^URL:\s*/, ""))
+    .filter((line) => line.startsWith("URL:"))
+    .map((line) => line.replace(/^URL:\s*/, ""))
     .slice(0, 3);
 
   const responseParts: string[] = [];
@@ -144,7 +148,7 @@ const formatSearchToolFallback = (toolResult: string) => {
 const formatPlacesToolFallback = (toolResult: string) => {
   const lines = toolResult
     .split("\n")
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   const responseLines: string[] = ["Achei estas opcoes perto de voce:"];
@@ -188,7 +192,7 @@ const formatForWhatsApp = (text: string) => {
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1\n$2")
     .replace(/\*\*(.*?)\*\*/g, "*$1*")
     .split("\n")
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   const formatted: string[] = [];
@@ -277,14 +281,24 @@ const isPlacesFailure = (toolResult: string) =>
 export const aiService = {
   getAIResponse: async (remoteJid: string, userMessage: string): Promise<string> => {
     try {
-      dbService.addMessage({ remoteJid, fromMe: false, content: userMessage, timestamp: Date.now() });
+      dbService.addMessage({
+        remoteJid,
+        fromMe: false,
+        content: userMessage,
+        timestamp: Date.now(),
+      });
 
       const mcpTools = mcpManager.getToolsForGemini();
       const memories = dbService.getUserMemories(remoteJid);
-      const latestLocationMemory = memories.find((memory: { category: string; content: string }) => memory.category === "location");
-      const pendingIntent = parsePendingIntent(dbService.getLatestUserMemory(remoteJid, "pending_intent")?.content);
+      const latestLocationMemory = memories.find(
+        (memory: { category: string; content: string }) => memory.category === "location"
+      );
+      const pendingIntent = parsePendingIntent(
+        dbService.getLatestUserMemory(remoteJid, "pending_intent")?.content
+      );
       const recentHistory = dbService.getHistory(remoteJid, 6);
-      const lastAssistantMessage = [...recentHistory].reverse().find(msg => msg.fromMe)?.content || "";
+      const lastAssistantMessage =
+        [...recentHistory].reverse().find((msg) => msg.fromMe)?.content || "";
       const cep = normalizeCep(userMessage);
 
       const executeNearbySearchWithRecovery = async (
@@ -296,7 +310,7 @@ export const aiService = {
         const placesResult = await placesSearchTool.execute({
           serviceType,
           textQuery,
-          locationQuery
+          locationQuery,
         });
 
         if (!isPlacesFailure(placesResult)) {
@@ -308,25 +322,33 @@ export const aiService = {
         const fallbackQuery = `${textQuery || serviceQueryMap[serviceType || ""] || "lugares"} perto de ${locationQuery}`;
         const tavilyResult = await tavilySearchTool.execute({
           query: fallbackQuery,
-          topic: "general"
+          topic: "general",
         });
 
         if (!tavilyResult.startsWith("A busca web estruturada falhou")) {
-          dbService.setUserMemory(remoteJid, "last_failure", JSON.stringify({
-            kind: "nearby_search",
-            serviceType,
-            locationQuery,
-            recovery: "tavily_fallback"
-          }));
+          dbService.setUserMemory(
+            remoteJid,
+            "last_failure",
+            JSON.stringify({
+              kind: "nearby_search",
+              serviceType,
+              locationQuery,
+              recovery: "tavily_fallback",
+            })
+          );
           return formatForWhatsApp(formatSearchToolFallback(tavilyResult));
         }
 
-        dbService.setUserMemory(remoteJid, "last_failure", JSON.stringify({
-          kind: "nearby_search",
+        dbService.setUserMemory(
+          remoteJid,
+          "last_failure",
+          JSON.stringify({
+            kind: "nearby_search",
             serviceType,
             locationQuery,
-            recovery: "failed"
-          }));
+            recovery: "failed",
+          })
+        );
         return "Tive um contratempo para encontrar opcoes proximas agora. Se quiser, posso tentar de novo ou buscar de outro jeito.";
       };
 
@@ -353,18 +375,26 @@ export const aiService = {
       if (isServiceSearch(userMessage) && isLocalIntent(userMessage) && !latestLocationMemory) {
         const serviceType = inferServiceType(userMessage);
         if (serviceType) {
-          dbService.setUserMemory(remoteJid, "pending_intent", JSON.stringify({
-            kind: "nearby_search",
-            serviceType,
-            originalMessage: userMessage
-          } satisfies PendingIntent));
+          dbService.setUserMemory(
+            remoteJid,
+            "pending_intent",
+            JSON.stringify({
+              kind: "nearby_search",
+              serviceType,
+              originalMessage: userMessage,
+            } satisfies PendingIntent)
+          );
         }
         const reply = "Me fala seu bairro, CEP ou cidade e eu te passo opcoes proximas.";
         dbService.addMessage({ remoteJid, fromMe: true, content: reply, timestamp: Date.now() });
         return reply;
       }
 
-      if (pendingIntent?.kind === "nearby_search" && latestLocationMemory && wantsRetry(userMessage)) {
+      if (
+        pendingIntent?.kind === "nearby_search" &&
+        latestLocationMemory &&
+        wantsRetry(userMessage)
+      ) {
         const reply = await executeNearbySearchWithRecovery(
           pendingIntent.serviceType,
           latestLocationMemory.content,
@@ -376,11 +406,15 @@ export const aiService = {
 
       const inferredServiceType = inferServiceType(userMessage);
       if (inferredServiceType && latestLocationMemory) {
-        dbService.setUserMemory(remoteJid, "pending_intent", JSON.stringify({
-          kind: "nearby_search",
-          serviceType: inferredServiceType,
-          originalMessage: userMessage
-        } satisfies PendingIntent));
+        dbService.setUserMemory(
+          remoteJid,
+          "pending_intent",
+          JSON.stringify({
+            kind: "nearby_search",
+            serviceType: inferredServiceType,
+            originalMessage: userMessage,
+          } satisfies PendingIntent)
+        );
         const reply = await executeNearbySearchWithRecovery(
           inferredServiceType,
           latestLocationMemory.content,
@@ -389,8 +423,8 @@ export const aiService = {
         dbService.addMessage({ remoteJid, fromMe: true, content: reply, timestamp: Date.now() });
         return reply;
       }
-      
-      const model = genAI.getGenerativeModel({ 
+
+      const model = genAI.getGenerativeModel({
         model: geminiModel,
         systemInstruction: `Você é um SOBERANO DE IA AUTO-EVOLUTIVO (WhatsApp).
         
@@ -409,47 +443,56 @@ export const aiService = {
         10. PRECISAO EM CINEMA E HORARIOS: Nao afirme filmes, horarios, precos ou disponibilidade se isso nao estiver claramente sustentado pelos resultados da busca. Se faltar confirmacao, diga que a programacao precisa ser confirmada no link oficial.
         11. LOCALIZACAO: Para pedidos locais como "perto de mim", use a localizacao conhecida do usuario. Se nao houver localizacao, peca bairro, CEP ou cidade antes de buscar.
         12. LUGARES PROXIMOS: Para negocios locais como lava-rapido, restaurantes, farmacias, oficinas e cinemas proximos, prefira 'search_nearby_places' em vez de 'search_web'.`,
-        tools: [{
-          functionDeclarations: [
-            ...(allowSelfModification ? [{
-              name: selfEvolutionTool.name,
-              description: selfEvolutionTool.description,
-              parameters: selfEvolutionTool.parameters as any
-            }, {
-              name: autonomousTool.name,
-              description: autonomousTool.description,
-              parameters: autonomousTool.parameters as any
-            }] : []),
-            {
-              name: placesSearchTool.name,
-              description: placesSearchTool.description,
-              parameters: placesSearchTool.parameters as any
-            },
-            {
-              name: tavilySearchTool.name,
-              description: tavilySearchTool.description,
-              parameters: tavilySearchTool.parameters as any
-            },
-            ...mcpTools.map(t => ({
-              name: t.name,
-              description: t.description,
-              parameters: t.parameters as any
-            }))
-          ]
-        }]
+        tools: [
+          {
+            functionDeclarations: [
+              ...(allowSelfModification
+                ? [
+                    {
+                      name: selfEvolutionTool.name,
+                      description: selfEvolutionTool.description,
+                      parameters: selfEvolutionTool.parameters,
+                    },
+                    {
+                      name: autonomousTool.name,
+                      description: autonomousTool.description,
+                      parameters: autonomousTool.parameters,
+                    },
+                  ]
+                : []),
+              {
+                name: placesSearchTool.name,
+                description: placesSearchTool.description,
+                parameters: placesSearchTool.parameters,
+              },
+              {
+                name: tavilySearchTool.name,
+                description: tavilySearchTool.description,
+                parameters: tavilySearchTool.parameters,
+              },
+              ...mcpTools.map((t) => ({
+                name: t.name,
+                description: t.description,
+                parameters: t.parameters,
+              })),
+            ] as unknown as import("@google/generative-ai").FunctionDeclaration[],
+          },
+        ],
       });
 
-      const userProfile = memories.length > 0 
-        ? "\n\nO que você já sabe sobre este usuário:\n" + memories.map(m => `- ${m.category}: ${m.content}`).join('\n')
-        : "";
+      const userProfile =
+        memories.length > 0
+          ? "\n\nO que você já sabe sobre este usuário:\n" +
+            memories.map((m) => `- ${m.category}: ${m.content}`).join("\n")
+          : "";
 
       const history = dbService.getHistory(remoteJid, 15);
-      
+
       // Removemos a última mensagem do histórico (que é a que acabamos de adicionar)
       // pois ela será enviada via sendMessage.
-      const chatContext = history.slice(0, -1).map(msg => ({
-        role: msg.fromMe ? 'model' : 'user',
-        parts: [{ text: msg.content }]
+      const chatContext = history.slice(0, -1).map((msg) => ({
+        role: msg.fromMe ? "model" : "user",
+        parts: [{ text: msg.content }],
       }));
 
       const chat = model.startChat({ history: chatContext });
@@ -458,53 +501,66 @@ export const aiService = {
       let result = await chat.sendMessage(promptComContexto);
       let response = result.response;
       let lastToolResult = "";
-      
-      const call = response.candidates?.[0]?.content?.parts?.find(p => p.functionCall);
+
+      const call = response.candidates?.[0]?.content?.parts?.find((p) => p.functionCall);
       if (call?.functionCall) {
         const { name, args } = call.functionCall;
         console.log("[AI] ferramenta solicitada", { name, args });
-        
+
         // 1. Lida com Auto-Evolução/Autonomia Silenciosamente
         if (name === selfEvolutionTool.name || name === autonomousTool.name) {
           const toolInstance = name === selfEvolutionTool.name ? selfEvolutionTool : autonomousTool;
-          await toolInstance.execute(args);
+          await toolInstance.execute(args as Record<string, unknown>);
           // Em vez de retornar log técnico, pede desculpas pelo tempo e sugere o resultado
           return "Estou terminando de preparar isso para você. Pode me enviar um 'ok' ou repetir o pedido em 10 segundos?";
         }
 
         if (name === placesSearchTool.name) {
+          const typedArgs = args as {
+            serviceType?: string;
+            textQuery?: string;
+            locationQuery: string;
+          };
           const toolResult = await placesSearchTool.execute({
-            serviceType: (args as any).serviceType,
-            textQuery: (args as any).textQuery,
-            locationQuery: (args as any).locationQuery
+            serviceType: typedArgs.serviceType,
+            textQuery: typedArgs.textQuery,
+            locationQuery: typedArgs.locationQuery,
           });
           lastToolResult = toolResult;
-          result = await chat.sendMessage([{
-            functionResponse: { name, response: { content: toolResult } }
-          }]);
+          result = await chat.sendMessage([
+            {
+              functionResponse: { name, response: { content: toolResult } },
+            },
+          ]);
           response = result.response;
-        }
-
-        else if (name === tavilySearchTool.name) {
+        } else if (name === tavilySearchTool.name) {
+          const typedArgs = args as { query: string; topic?: "general" | "news" };
           const toolResult = await tavilySearchTool.execute({
-            query: (args as any).query,
-            topic: (args as any).topic
+            query: typedArgs.query,
+            topic: typedArgs.topic,
           });
           lastToolResult = toolResult;
-          result = await chat.sendMessage([{
-            functionResponse: { name, response: { content: toolResult } }
-          }]);
+          result = await chat.sendMessage([
+            {
+              functionResponse: { name, response: { content: toolResult } },
+            },
+          ]);
           response = result.response;
         }
 
         // 2. Lida com MCP Tools (Execução real da tarefa)
         else if (name !== tavilySearchTool.name && name !== placesSearchTool.name) {
           try {
-            const toolResult = await mcpManager.callTool(name, args);
+            const toolResult = await mcpManager.callTool(
+              name,
+              args as unknown as Record<string, unknown>
+            );
             lastToolResult = toolResult;
-            result = await chat.sendMessage([{
-              functionResponse: { name: name, response: { content: toolResult } }
-            }]);
+            result = await chat.sendMessage([
+              {
+                functionResponse: { name: name, response: { content: toolResult } },
+              },
+            ]);
             response = result.response;
           } catch (toolError) {
             console.error("Erro na ferramenta MCP:", toolError);
@@ -516,17 +572,22 @@ export const aiService = {
       const responseText =
         response.text() ||
         (lastToolResult
-          ? (lastToolResult.includes("BUSCA_LUGARES_PROXIMOS")
-              ? formatPlacesToolFallback(lastToolResult)
-              : formatSearchToolFallback(lastToolResult))
+          ? lastToolResult.includes("BUSCA_LUGARES_PROXIMOS")
+            ? formatPlacesToolFallback(lastToolResult)
+            : formatSearchToolFallback(lastToolResult)
           : "");
       const whatsappResponse = formatForWhatsApp(responseText);
-      dbService.addMessage({ remoteJid, fromMe: true, content: whatsappResponse, timestamp: Date.now() });
+      dbService.addMessage({
+        remoteJid,
+        fromMe: true,
+        content: whatsappResponse,
+        timestamp: Date.now(),
+      });
 
       return whatsappResponse;
     } catch (error) {
       console.error("Erro no AI Service:", error);
       return "Estou processando sua solicitação, por favor aguarde um momento.";
     }
-  }
+  },
 };

@@ -1,4 +1,4 @@
-import { db } from '../client.js';
+import { db } from "../client.js";
 
 export interface CronJob {
   id: number;
@@ -21,22 +21,22 @@ export const cronQueries = {
   },
 
   getAll(): CronJob[] {
-    return db.prepare('SELECT * FROM cron_jobs ORDER BY name').all() as CronJob[];
+    return db.prepare("SELECT * FROM cron_jobs ORDER BY name").all() as CronJob[];
   },
 
   getEnabled(): CronJob[] {
-    return db.prepare('SELECT * FROM cron_jobs WHERE enabled = 1').all() as CronJob[];
+    return db.prepare("SELECT * FROM cron_jobs WHERE enabled = 1").all() as CronJob[];
   },
 
   getByName(name: string): CronJob | undefined {
-    return db.prepare('SELECT * FROM cron_jobs WHERE name = ?').get(name) as CronJob | undefined;
+    return db.prepare("SELECT * FROM cron_jobs WHERE name = ?").get(name) as CronJob | undefined;
   },
 
   setEnabled(name: string, enabled: boolean): void {
-    db.prepare('UPDATE cron_jobs SET enabled = ? WHERE name = ?').run(enabled ? 1 : 0, name);
+    db.prepare("UPDATE cron_jobs SET enabled = ? WHERE name = ?").run(enabled ? 1 : 0, name);
   },
 
-  logRun(name: string, status: 'success' | 'failed', output?: object): void {
+  logRun(name: string, status: "success" | "failed", output?: object): void {
     db.prepare(`
       UPDATE cron_jobs
       SET last_run_at = CURRENT_TIMESTAMP,
@@ -47,6 +47,6 @@ export const cronQueries = {
   },
 
   delete(name: string): void {
-    db.prepare('DELETE FROM cron_jobs WHERE name = ?').run(name);
+    db.prepare("DELETE FROM cron_jobs WHERE name = ?").run(name);
   },
 };

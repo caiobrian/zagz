@@ -1,8 +1,13 @@
 export const morningBriefingJob = {
-  name: 'morning_briefing',
-  schedule: '0 8 * * *',
+  name: "morning_briefing",
+  schedule: "0 8 * * *",
   buildPrompt(): string {
-    const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const today = new Date().toLocaleDateString("pt-BR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
     return `Hoje é ${today}. Gere um briefing matinal completo para o usuário incluindo:
 1. Saudação personalizada baseada nas memórias do usuário
 2. Resumo de projetos ativos (consulte a memória categoria "projects")
