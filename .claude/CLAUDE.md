@@ -46,3 +46,23 @@ src/
 - **Dev (watch):** `npm run dev` → `tsx --watch src/index.ts`
 - **Build:** `npm run build` → `npx tsc`
 - **Start:** `npm start` → `node dist/index.js`
+- **Lint:** `npm run lint` → `biome lint ./src`
+- **Format:** `npm run format` → `biome format --write ./src`
+- **Check (lint+format+fix):** `npm run check` → `biome check --write ./src`
+- **TypeCheck:** `npm run typecheck` → `tsc --noEmit`
+
+## Pre-Commit (OBRIGATÓRIO)
+
+**SEMPRE antes de fazer um commit**, execute os seguintes comandos na ordem:
+
+```bash
+npm run check      # Biome: lint + format + auto-fix
+npm run typecheck  # TypeScript: verifica tipos sem compilar
+```
+
+Se qualquer um falhar, corrija os erros antes de prosseguir com o commit. O hook de pre-commit (husky) também executa esses checks automaticamente, mas a IA deve rodá-los proativamente antes de chamar `git commit`.
+
+## Qualidade de Código (Biome)
+- **Linter + Formatter:** Biome (`biome.json` na raiz)
+- `biome check --write` aplica lint e formatação automaticamente
+- Configuração: 2 espaços, aspas duplas, trailing commas ES5, line width 100
