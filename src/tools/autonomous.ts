@@ -44,6 +44,12 @@ export const autonomousTool = {
 
       if (args.actionType === "write_file" && args.filePath && args.content) {
         const fullPath = path.resolve(args.filePath);
+        // Bloqueia escrita em arquivos críticos do sistema
+        const blocked = ['.env', 'auth_info_baileys', 'database.db', 'node_modules'];
+        const isBlocked = blocked.some(p => fullPath.includes(p));
+        if (isBlocked) {
+          return `Escrita bloqueada: "${args.filePath}" é um arquivo protegido do sistema. Use outro caminho.`;
+        }
         // Garante que a pasta existe
         fs.mkdirSync(path.dirname(fullPath), { recursive: true });
         fs.writeFileSync(fullPath, args.content);
