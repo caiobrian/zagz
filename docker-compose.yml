@@ -1,0 +1,19 @@
+services:
+  zagz:
+    build: .
+    container_name: zagz
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # SQLite database — persiste entre deploys
+      - ./data:/app/data
+      # Sessão WhatsApp (credenciais Baileys) — evita re-escanear QR a cada deploy
+      - ./auth_info_baileys:/app/auth_info_baileys
+    # Necessário para exibir o QR code corretamente no terminal
+    stdin_open: true
+    tty: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
