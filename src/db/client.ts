@@ -56,10 +56,26 @@ db.exec(`
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS purchases (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      TEXT NOT NULL,
+    product_name    TEXT NOT NULL,
+    product_url     TEXT,
+    estimated_price TEXT,
+    actual_price    TEXT,
+    store           TEXT,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    notes           TEXT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_state ON sessions(state);
   CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category);
   CREATE INDEX IF NOT EXISTS idx_tools_log_tool ON tools_log(tool_name);
+  CREATE INDEX IF NOT EXISTS idx_purchases_session ON purchases(session_id);
+  CREATE INDEX IF NOT EXISTS idx_purchases_status ON purchases(status);
 `);
 
 export default db;
