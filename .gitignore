@@ -15,5 +15,8 @@ database.db-journal
 # Environment
 .env
 
+# Agent workspace (arquivos temporários do agente)
+workspace/
+
 # MacOS
 .DS_Store

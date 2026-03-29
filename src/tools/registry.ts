@@ -13,6 +13,48 @@ import { toolsLogQueries } from '../db/queries/tools.js';
 
 const allowSelfModification = process.env.ALLOW_SELF_MODIFICATION === 'true';
 
+// Tools whose args/result nunca devem aparecer em logs (dados financeiros sensíveis)
+const LOG_BLOCKLIST = new Set(['get_payment_credentials']);
+
+// Rate limiter in-memory: evita custo acidental por loop do agente
+const RATE_LIMITS: Record<string, number> = {
+  [tavilySearchTool.name]: 30,
+  [placesSearchTool.name]: 30,
+};
+const _rateCounts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(name: string): string | null {
+  const limit = RATE_LIMITS[name];
+  if (!limit) return null;
+  const now = Date.now();
+  const entry = _rateCounts.get(name);
+  if (!entry || now >= entry.resetAt) {
+    _rateCounts.set(name, { count: 1, resetAt: now + 3600_000 });
+    return null;
+  }
+  if (entry.count >= limit) {
+    return `Limite de ${limit} chamadas/hora atingido para "${name}". Tente novamente mais tarde.`;
+  }
+  entry.count++;
+  return null;
+}
+
+// Mascara padrões sensíveis antes de persistir em logs
+function sanitizeForLog(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return value
+      .replace(/\b\d{13,19}\b/g, '****') // números de cartão
+      .replace(/\b\d{3,4}\b(?=.*cvv|.*cvc)/gi, '***') // CVV próximo de label
+      .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, '***.***.***-**'); // CPF BR
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, sanitizeForLog(v)])
+    );
+  }
+  return value;
+}
+
 type ToolDeclaration = {
   name: string;
   description: string;
@@ -77,6 +119,9 @@ async function initSelfModificationTools() {
 async function execute(name: string, args: Record<string, unknown>, sessionId?: string): Promise<string> {
   const start = Date.now();
 
+  const rateLimitError = checkRateLimit(name);
+  if (rateLimitError) return rateLimitError;
+
   try {
     let result: string;
 
@@ -98,7 +143,7 @@ async function execute(name: string, args: Record<string, unknown>, sessionId?: 
         break;
 
       case cronManageTool.name:
-        result = cronManageTool.execute(args as Parameters<typeof cronManageTool.execute>[0]);
+        result = cronManageTool.execute({ ...(args as Parameters<typeof cronManageTool.execute>[0]), sessionId });
         break;
 
       case getPaymentCredentialsTool.name:
@@ -135,11 +180,15 @@ async function execute(name: string, args: Record<string, unknown>, sessionId?: 
         result = await mcpManager.callTool(name, args);
     }
 
-    toolsLogQueries.log(name, args, result, Date.now() - start, sessionId);
+    if (!LOG_BLOCKLIST.has(name)) {
+      toolsLogQueries.log(name, sanitizeForLog(args), sanitizeForLog(result), Date.now() - start, sessionId);
+    }
     return result;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    toolsLogQueries.log(name, args, { error: errorMsg }, Date.now() - start, sessionId);
+    if (!LOG_BLOCKLIST.has(name)) {
+      toolsLogQueries.log(name, sanitizeForLog(args), { error: errorMsg }, Date.now() - start, sessionId);
+    }
     console.error(`[Registry] Tool "${name}" failed:`, error);
     return `Ferramenta "${name}" falhou: ${errorMsg}`;
   }

@@ -77,10 +77,25 @@ export const cronManageTool = {
         type: 'STRING',
         description: 'Nome do job (ex: "morning_briefing", "finance_summary").',
       },
+      sessionId: {
+        type: 'STRING',
+        description: 'ID da sessão do usuário (preenchido automaticamente pelo sistema).',
+      },
     },
     required: ['action'],
   },
-  execute(args: { action: string; name?: string }): string {
+  execute(args: { action: string; name?: string; sessionId?: string }): string {
+    // Protege ações destrutivas contra uso não autorizado.
+    // Se AUTHORIZED_JID estiver configurado, apenas essa sessão pode modificar cron jobs.
+    const authorizedJid = process.env.AUTHORIZED_JID;
+    const isWriteAction = args.action !== 'list';
+    if (authorizedJid && isWriteAction) {
+      const sessionId = args.sessionId ?? '';
+      if (!sessionId.includes(authorizedJid.replace('@s.whatsapp.net', ''))) {
+        return 'Ação não autorizada: apenas o usuário principal pode gerenciar rotinas agendadas.';
+      }
+    }
+
     switch (args.action) {
       case 'list': {
         const jobs = cronQueries.getAll();
