@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import type { MCPServerConfig } from "./config.js";
 import { mcpServersConfig } from "./config.js";
 
 interface McpTool {
@@ -83,6 +84,37 @@ class AgenteMCPManager {
       description: t.description,
       parameters: this.sanitizeSchemaForGemini(t.inputSchema),
     }));
+  }
+
+  /**
+   * Connects a new MCP server at runtime and registers its tools.
+   * Used by evolve_agent to add capabilities without restarting.
+   */
+  async addServer(name: string, config: MCPServerConfig): Promise<void> {
+    if (this.clients.has(name)) {
+      console.warn(`[MCP]: Server '${name}' already connected.`);
+      return;
+    }
+
+    const transport = new StdioClientTransport({
+      command: config.command,
+      args: config.args,
+      env: { ...process.env, ...(config.env || {}) } as unknown as Record<string, string>,
+    });
+
+    const client = new Client(
+      { name: "whatsapp-ai-agent", version: "1.0.0" },
+      { capabilities: {} }
+    );
+
+    await client.connect(transport);
+    this.clients.set(name, client);
+
+    const response = await client.listTools();
+    const serverTools = response.tools.map((t) => ({ server: name, ...t }));
+    this.allTools.push(...serverTools);
+
+    console.log(`[MCP]: Server '${name}' added at runtime with ${serverTools.length} tool(s).`);
   }
 
   async callTool(geminiToolName: string, args: Record<string, unknown>) {

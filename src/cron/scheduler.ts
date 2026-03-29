@@ -3,6 +3,7 @@ import { agentCore } from "../agent/core.js";
 import { cronQueries } from "../db/queries/cron.js";
 import { checkAndSendAppointmentReminders } from "./jobs/appointment-reminder.js";
 import { financeSummaryJob } from "./jobs/finance-summary.js";
+import { memoryConsolidationJob } from "./jobs/memory-consolidation.js";
 import { morningBriefingJob } from "./jobs/morning-briefing.js";
 import { weeklyReviewJob } from "./jobs/weekly-review.js";
 
@@ -75,6 +76,28 @@ export function initScheduler(sender: (message: string) => Promise<void>): void 
 
     console.log(`[Cron] Scheduled "${dbJob.name}" → ${dbJob.schedule}`);
   }
+
+  // Memory consolidation: Sunday 3 AM
+  cronQueries.upsert(memoryConsolidationJob.name, memoryConsolidationJob.schedule);
+  cron.schedule(
+    memoryConsolidationJob.schedule,
+    async () => {
+      console.log(`[Cron] Running job: ${memoryConsolidationJob.name}`);
+      try {
+        const output = await memoryConsolidationJob.run();
+        cronQueries.logRun(memoryConsolidationJob.name, "success", { output });
+        if (whatsappSender) await whatsappSender(output);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[Cron] Job "${memoryConsolidationJob.name}" failed:`, error);
+        cronQueries.logRun(memoryConsolidationJob.name, "failed", { error: errorMsg });
+      }
+    },
+    { timezone: process.env.TZ || "America/Sao_Paulo" }
+  );
+  console.log(
+    `[Cron] Scheduled "${memoryConsolidationJob.name}" → ${memoryConsolidationJob.schedule}`
+  );
 
   // Appointment reminders: check every 30 minutes
   cron.schedule(

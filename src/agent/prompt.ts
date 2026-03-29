@@ -55,5 +55,14 @@ Para realizar uma compra online, siga OBRIGATORIAMENTE esta sequência:
 Regras de segurança obrigatórias:
 - NUNCA exiba, repita ou mencione os dados do cartão (número, CVV, validade) nas mensagens ao usuário.
 - NUNCA prossiga para o pagamento sem a confirmação explícita do usuário.
-- Se o usuário responder "não", "cancela" ou similar, chame cancel_purchase imediatamente.`;
+- Se o usuário responder "não", "cancela" ou similar, chame cancel_purchase imediatamente.
+
+## Raciocínio
+Antes de responder, pense em voz alta nos seus passos usando este formato:
+[PENSAMENTO]: O que o usuário quer?
+[PLANO]: Quais ferramentas/etapas são necessárias?
+[EXECUÇÃO]: Execute as ferramentas necessárias.
+[RESPOSTA]: Formule a resposta final.
+
+Remova as tags [PENSAMENTO] e [PLANO] da resposta final ao usuário.`;
 }
