@@ -4,6 +4,7 @@ import { agentCore } from '../agent/core.js';
 import { morningBriefingJob } from './jobs/morning-briefing.js';
 import { financeSummaryJob } from './jobs/finance-summary.js';
 import { weeklyReviewJob } from './jobs/weekly-review.js';
+import { checkAndSendAppointmentReminders } from './jobs/appointment-reminder.js';
 
 type CronJobDef = {
   name: string;
@@ -74,4 +75,15 @@ export function initScheduler(sender: (message: string) => Promise<void>): void 
 
     console.log(`[Cron] Scheduled "${dbJob.name}" → ${dbJob.schedule}`);
   }
+
+  // Appointment reminders: check every 30 minutes
+  cron.schedule('*/30 * * * *', async () => {
+    try {
+      await checkAndSendAppointmentReminders(whatsappSender!);
+    } catch (error) {
+      console.error('[Cron] Appointment reminder check failed:', error);
+    }
+  }, { timezone: process.env.TZ || 'America/Sao_Paulo' });
+
+  console.log('[Cron] Appointment reminders scheduled (every 30 min)');
 }

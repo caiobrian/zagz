@@ -70,12 +70,30 @@ db.exec(`
     updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS appointments (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id        TEXT,
+    service_type      TEXT NOT NULL,
+    provider_name     TEXT NOT NULL,
+    provider_phone    TEXT,
+    provider_address  TEXT,
+    scheduled_at      TEXT NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'scheduled',
+    notes             TEXT,
+    reminder_24h_sent INTEGER NOT NULL DEFAULT 0,
+    reminder_1h_sent  INTEGER NOT NULL DEFAULT 0,
+    created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_state ON sessions(state);
   CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category);
   CREATE INDEX IF NOT EXISTS idx_tools_log_tool ON tools_log(tool_name);
   CREATE INDEX IF NOT EXISTS idx_purchases_session ON purchases(session_id);
   CREATE INDEX IF NOT EXISTS idx_purchases_status ON purchases(status);
+  CREATE INDEX IF NOT EXISTS idx_appointments_scheduled ON appointments(scheduled_at);
+  CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
 `);
 
 export default db;

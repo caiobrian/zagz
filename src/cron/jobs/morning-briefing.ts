@@ -7,8 +7,9 @@ export const morningBriefingJob = {
 1. Saudação personalizada baseada nas memórias do usuário
 2. Resumo de projetos ativos (consulte a memória categoria "projects")
 3. Rotinas e compromissos do dia (consulte a memória categoria "routine")
-4. Se tiver dados financeiros relevantes (categoria "finance"), um lembrete breve
-5. Qualquer tarefa pendente que o usuário tenha mencionado recentemente
+4. Agendamentos de hoje e dos próximos dias (use list_appointments para verificar)
+5. Se tiver dados financeiros relevantes (categoria "finance"), um lembrete breve
+6. Qualquer tarefa pendente que o usuário tenha mencionado recentemente
 
 Seja conciso e direto — o formato é para WhatsApp. Use emojis com moderação.`;
   },
