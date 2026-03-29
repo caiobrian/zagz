@@ -20,6 +20,8 @@ const logger = pino({ level: "silent" });
 let activeSock: WASocket | null = null;
 // The JID we listen to and respond on (set on first incoming message)
 let activeJid: string | null = null;
+// Handler registered via WhatsAppChannel.onMessage() — falls back to agentCore
+let activeMessageHandler: ((text: string) => Promise<string>) | null = null;
 
 /**
  * Send a proactive WhatsApp message (used by cron jobs).
@@ -144,7 +146,8 @@ export async function startWhatsApp(): Promise<WASocket> {
       await sock.sendPresenceUpdate("composing", remoteJid);
 
       try {
-        const response = await agentCore.handleMessage(userMessage);
+        const handler = activeMessageHandler ?? ((t: string) => agentCore.handleMessage(t));
+        const response = await handler(userMessage);
         await sock.sendMessage(remoteJid, { text: response }, { quoted: msg as WAMessage });
       } catch (error) {
         console.error("[WA] Error handling message:", error);
@@ -163,10 +166,8 @@ export async function startWhatsApp(): Promise<WASocket> {
 export class WhatsAppChannel implements MessageChannel {
   name = "whatsapp";
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onMessage(_handler: (text: string) => Promise<string>): void {
-    // WhatsApp channel uses agentCore directly via startWhatsApp()
-    // The handler is stored at the index.ts level and not needed here
+  onMessage(handler: (text: string) => Promise<string>): void {
+    activeMessageHandler = handler;
   }
 
   async sendMessage(text: string): Promise<void> {

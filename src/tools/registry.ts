@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { toolsLogQueries } from "../db/queries/tools.js";
 import { mcpManager } from "../mcp/client.js";
+import { loadExternalConfig } from "../skills/external/loader.js";
 import { loadSkills } from "../skills/loader.js";
 import type { Skill, SkillTool } from "../skills/types.js";
 
@@ -62,7 +63,19 @@ async function initRegistry(extraSkills?: Skill[]): Promise<void> {
 
   const skills = await loadSkills(skillsDir);
 
-  // Also include any extra skills passed directly (e.g. from external loader)
+  // Load custom skill directories from skills.json
+  const externalConfig = loadExternalConfig();
+  if (externalConfig.customSkills.length > 0) {
+    console.log(
+      `[Registry] Loading ${externalConfig.customSkills.length} custom skill(s) from skills.json...`
+    );
+    for (const skillPath of externalConfig.customSkills) {
+      const customSkills = await loadSkills(skillPath);
+      skills.push(...customSkills);
+    }
+  }
+
+  // Also include any extra skills passed directly (e.g. runtime registration)
   if (extraSkills) {
     skills.push(...extraSkills);
   }

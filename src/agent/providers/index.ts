@@ -1,5 +1,6 @@
 import { AnthropicProvider } from "./anthropic.js";
 import { GeminiProvider } from "./gemini.js";
+import { OpenAIProvider } from "./openai.js";
 import type { AIProvider } from "./types.js";
 
 export function createAIProvider(): AIProvider {
@@ -7,6 +8,8 @@ export function createAIProvider(): AIProvider {
   switch (provider) {
     case "anthropic":
       return new AnthropicProvider();
+    case "openai":
+      return new OpenAIProvider();
     default:
       return new GeminiProvider();
   }
