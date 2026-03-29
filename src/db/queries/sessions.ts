@@ -1,7 +1,7 @@
 import { db } from '../client.js';
 
 export type SessionState = 'idle' | 'in_progress' | 'awaiting_confirmation' | 'completed' | 'failed';
-export type SessionFlow = 'cinema' | 'purchase' | 'search' | 'cron_result' | null;
+export type SessionFlow = 'cinema' | 'purchase' | 'search' | 'cron_result' | 'appointment' | null;
 
 export interface Session {
   id: string;

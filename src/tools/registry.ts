@@ -8,6 +8,12 @@ import {
   completePurchaseTool,
   cancelPurchaseTool,
 } from './paymentTool.js';
+import {
+  createAppointmentTool,
+  listAppointmentsTool,
+  updateAppointmentTool,
+  cancelAppointmentTool,
+} from './schedulingTool.js';
 import { mcpManager } from '../mcp/client.js';
 import { toolsLogQueries } from '../db/queries/tools.js';
 
@@ -76,6 +82,10 @@ function getDeclarations(): ToolDeclaration[] {
     { name: confirmPurchaseTool.name, description: confirmPurchaseTool.description, parameters: confirmPurchaseTool.parameters as Record<string, unknown> },
     { name: completePurchaseTool.name, description: completePurchaseTool.description, parameters: completePurchaseTool.parameters as Record<string, unknown> },
     { name: cancelPurchaseTool.name, description: cancelPurchaseTool.description, parameters: cancelPurchaseTool.parameters as Record<string, unknown> },
+    { name: createAppointmentTool.name, description: createAppointmentTool.description, parameters: createAppointmentTool.parameters as Record<string, unknown> },
+    { name: listAppointmentsTool.name, description: listAppointmentsTool.description, parameters: listAppointmentsTool.parameters as Record<string, unknown> },
+    { name: updateAppointmentTool.name, description: updateAppointmentTool.description, parameters: updateAppointmentTool.parameters as Record<string, unknown> },
+    { name: cancelAppointmentTool.name, description: cancelAppointmentTool.description, parameters: cancelAppointmentTool.parameters as Record<string, unknown> },
   ];
 
   if (allowSelfModification) {
@@ -164,6 +174,22 @@ async function execute(name: string, args: Record<string, unknown>, sessionId?: 
 
       case cancelPurchaseTool.name:
         result = cancelPurchaseTool.execute(args as Parameters<typeof cancelPurchaseTool.execute>[0]);
+        break;
+
+      case createAppointmentTool.name:
+        result = createAppointmentTool.execute(args as Parameters<typeof createAppointmentTool.execute>[0]);
+        break;
+
+      case listAppointmentsTool.name:
+        result = listAppointmentsTool.execute(args as Parameters<typeof listAppointmentsTool.execute>[0]);
+        break;
+
+      case updateAppointmentTool.name:
+        result = updateAppointmentTool.execute(args as Parameters<typeof updateAppointmentTool.execute>[0]);
+        break;
+
+      case cancelAppointmentTool.name:
+        result = cancelAppointmentTool.execute(args as Parameters<typeof cancelAppointmentTool.execute>[0]);
         break;
 
       default:
