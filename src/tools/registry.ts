@@ -1,37 +1,22 @@
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { toolsLogQueries } from "../db/queries/tools.js";
 import { mcpManager } from "../mcp/client.js";
-import { cronManageTool, memoryReadTool, memoryWriteTool } from "./memory-tool.js";
-import {
-  cancelPurchaseTool,
-  completePurchaseTool,
-  confirmPurchaseTool,
-  getPaymentCredentialsTool,
-  initiatePurchaseTool,
-} from "./paymentTool.js";
-import { placesSearchTool } from "./placesSearch.js";
-import {
-  cancelAppointmentTool,
-  createAppointmentTool,
-  listAppointmentsTool,
-  updateAppointmentTool,
-} from "./schedulingTool.js";
-import { tavilySearchTool } from "./tavilySearch.js";
+import { loadSkills } from "../skills/loader.js";
+import type { Skill, SkillTool } from "../skills/types.js";
 
 const allowSelfModification = process.env.ALLOW_SELF_MODIFICATION === "true";
 
-// Tools whose args/result nunca devem aparecer em logs (dados financeiros sensíveis)
-const LOG_BLOCKLIST = new Set(["get_payment_credentials"]);
+// Tool map built during init: toolName → SkillTool
+const _toolMap = new Map<string, SkillTool>();
 
-// Rate limiter in-memory: evita custo acidental por loop do agente
-const RATE_LIMITS: Record<string, number> = {
-  [tavilySearchTool.name]: 30,
-  [placesSearchTool.name]: 30,
-};
+// Rate limiter in-memory
 const _rateCounts = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(name: string): string | null {
-  const limit = RATE_LIMITS[name];
+function checkRateLimit(tool: SkillTool): string | null {
+  const limit = tool.rateLimit;
   if (!limit) return null;
+  const name = tool.name;
   const now = Date.now();
   const entry = _rateCounts.get(name);
   if (!entry || now >= entry.resetAt) {
@@ -45,13 +30,13 @@ function checkRateLimit(name: string): string | null {
   return null;
 }
 
-// Mascara padrões sensíveis antes de persistir em logs
+// Masks sensitive patterns before persisting in logs
 function sanitizeForLog(value: unknown): unknown {
   if (typeof value === "string") {
     return value
-      .replace(/\b\d{13,19}\b/g, "****") // números de cartão
-      .replace(/\b\d{3,4}\b(?=.*cvv|.*cvc)/gi, "***") // CVV próximo de label
-      .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, "***.***.***-**"); // CPF BR
+      .replace(/\b\d{13,19}\b/g, "****")
+      .replace(/\b\d{3,4}\b(?=.*cvv|.*cvc)/gi, "***")
+      .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, "***.***.***-**");
   }
   if (value && typeof value === "object") {
     return Object.fromEntries(
@@ -68,98 +53,41 @@ type ToolDeclaration = {
 };
 
 /**
+ * Initializes the registry by loading all skills from the skills directory.
+ * Must be called once at startup (after initSelfModificationTools is no longer needed).
+ */
+async function initRegistry(extraSkills?: Skill[]): Promise<void> {
+  const __dirname = fileURLToPath(new URL(".", import.meta.url));
+  const skillsDir = join(__dirname, "../skills");
+
+  const skills = await loadSkills(skillsDir);
+
+  // Also include any extra skills passed directly (e.g. from external loader)
+  if (extraSkills) {
+    skills.push(...extraSkills);
+  }
+
+  for (const skill of skills) {
+    for (const tool of skill.tools) {
+      _toolMap.set(tool.name, tool);
+    }
+  }
+
+  console.log(`[Registry] Loaded ${_toolMap.size} tools from ${skills.length} skills.`);
+}
+
+/**
  * Returns all Gemini function declarations (built-in + MCP).
  */
 function getDeclarations(): ToolDeclaration[] {
-  const declarations: ToolDeclaration[] = [
-    {
-      name: placesSearchTool.name,
-      description: placesSearchTool.description,
-      parameters: placesSearchTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: tavilySearchTool.name,
-      description: tavilySearchTool.description,
-      parameters: tavilySearchTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: memoryReadTool.name,
-      description: memoryReadTool.description,
-      parameters: memoryReadTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: memoryWriteTool.name,
-      description: memoryWriteTool.description,
-      parameters: memoryWriteTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: cronManageTool.name,
-      description: cronManageTool.description,
-      parameters: cronManageTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: getPaymentCredentialsTool.name,
-      description: getPaymentCredentialsTool.description,
-      parameters: getPaymentCredentialsTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: initiatePurchaseTool.name,
-      description: initiatePurchaseTool.description,
-      parameters: initiatePurchaseTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: confirmPurchaseTool.name,
-      description: confirmPurchaseTool.description,
-      parameters: confirmPurchaseTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: completePurchaseTool.name,
-      description: completePurchaseTool.description,
-      parameters: completePurchaseTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: cancelPurchaseTool.name,
-      description: cancelPurchaseTool.description,
-      parameters: cancelPurchaseTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: createAppointmentTool.name,
-      description: createAppointmentTool.description,
-      parameters: createAppointmentTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: listAppointmentsTool.name,
-      description: listAppointmentsTool.description,
-      parameters: listAppointmentsTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: updateAppointmentTool.name,
-      description: updateAppointmentTool.description,
-      parameters: updateAppointmentTool.parameters as Record<string, unknown>,
-    },
-    {
-      name: cancelAppointmentTool.name,
-      description: cancelAppointmentTool.description,
-      parameters: cancelAppointmentTool.parameters as Record<string, unknown>,
-    },
-  ];
+  const declarations: ToolDeclaration[] = [];
 
-  if (allowSelfModification) {
-    // Lazy imports to avoid loading when not needed
-    const { selfEvolutionTool } = await_import_selfEvolution();
-    const { autonomousTool } = await_import_autonomous();
-    if (selfEvolutionTool)
-      declarations.push({
-        name: selfEvolutionTool.name,
-        description: selfEvolutionTool.description,
-        parameters: selfEvolutionTool.parameters as Record<string, unknown>,
-      });
-    if (autonomousTool)
-      declarations.push({
-        name: autonomousTool.name,
-        description: autonomousTool.description,
-        parameters: autonomousTool.parameters as Record<string, unknown>,
-      });
+  for (const tool of _toolMap.values()) {
+    declarations.push({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    });
   }
 
   const mcpTools = mcpManager.getToolsForGemini();
@@ -174,25 +102,6 @@ function getDeclarations(): ToolDeclaration[] {
   return declarations;
 }
 
-// Synchronous placeholders — these tools are loaded at module init
-let _selfEvolutionTool: typeof import("./selfEvolution.js").selfEvolutionTool | null = null;
-let _autonomousTool: typeof import("./autonomous.js").autonomousTool | null = null;
-
-function await_import_selfEvolution() {
-  return { selfEvolutionTool: _selfEvolutionTool };
-}
-function await_import_autonomous() {
-  return { autonomousTool: _autonomousTool };
-}
-
-async function initSelfModificationTools() {
-  if (!allowSelfModification) return;
-  const { selfEvolutionTool } = await import("./selfEvolution.js");
-  const { autonomousTool } = await import("./autonomous.js");
-  _selfEvolutionTool = selfEvolutionTool;
-  _autonomousTool = autonomousTool;
-}
-
 /**
  * Executes a tool by name. Returns a string result.
  */
@@ -203,132 +112,93 @@ async function execute(
 ): Promise<string> {
   const start = Date.now();
 
-  const rateLimitError = checkRateLimit(name);
-  if (rateLimitError) return rateLimitError;
+  const tool = _toolMap.get(name);
 
+  if (tool) {
+    const rateLimitError = checkRateLimit(tool);
+    if (rateLimitError) return rateLimitError;
+
+    try {
+      const result = await tool.execute(args, sessionId);
+
+      if (!tool.logBlocklist) {
+        toolsLogQueries.log(
+          name,
+          sanitizeForLog(args),
+          sanitizeForLog(result),
+          Date.now() - start,
+          sessionId
+        );
+      }
+      return result;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (!tool.logBlocklist) {
+        toolsLogQueries.log(
+          name,
+          sanitizeForLog(args),
+          { error: errorMsg },
+          Date.now() - start,
+          sessionId
+        );
+      }
+      console.error(`[Registry] Tool "${name}" failed:`, error);
+      return `Ferramenta "${name}" falhou: ${errorMsg}`;
+    }
+  }
+
+  // MCP fallthrough
   try {
-    let result: string;
-
-    switch (name) {
-      case placesSearchTool.name:
-        result = await placesSearchTool.execute(
-          args as Parameters<typeof placesSearchTool.execute>[0]
-        );
-        break;
-
-      case tavilySearchTool.name:
-        result = await tavilySearchTool.execute(
-          args as Parameters<typeof tavilySearchTool.execute>[0]
-        );
-        break;
-
-      case memoryReadTool.name:
-        result = memoryReadTool.execute(args as Parameters<typeof memoryReadTool.execute>[0]);
-        break;
-
-      case memoryWriteTool.name:
-        result = memoryWriteTool.execute(args as Parameters<typeof memoryWriteTool.execute>[0]);
-        break;
-
-      case cronManageTool.name:
-        result = cronManageTool.execute({
-          ...(args as Parameters<typeof cronManageTool.execute>[0]),
-          sessionId,
-        });
-        break;
-
-      case getPaymentCredentialsTool.name:
-        result = getPaymentCredentialsTool.execute();
-        break;
-
-      case initiatePurchaseTool.name:
-        result = initiatePurchaseTool.execute(
-          args as Parameters<typeof initiatePurchaseTool.execute>[0]
-        );
-        break;
-
-      case confirmPurchaseTool.name:
-        result = confirmPurchaseTool.execute(
-          args as Parameters<typeof confirmPurchaseTool.execute>[0]
-        );
-        break;
-
-      case completePurchaseTool.name:
-        result = completePurchaseTool.execute(
-          args as Parameters<typeof completePurchaseTool.execute>[0]
-        );
-        break;
-
-      case cancelPurchaseTool.name:
-        result = cancelPurchaseTool.execute(
-          args as Parameters<typeof cancelPurchaseTool.execute>[0]
-        );
-        break;
-
-      case createAppointmentTool.name:
-        result = createAppointmentTool.execute(
-          args as Parameters<typeof createAppointmentTool.execute>[0]
-        );
-        break;
-
-      case listAppointmentsTool.name:
-        result = listAppointmentsTool.execute(
-          args as Parameters<typeof listAppointmentsTool.execute>[0]
-        );
-        break;
-
-      case updateAppointmentTool.name:
-        result = updateAppointmentTool.execute(
-          args as Parameters<typeof updateAppointmentTool.execute>[0]
-        );
-        break;
-
-      case cancelAppointmentTool.name:
-        result = cancelAppointmentTool.execute(
-          args as Parameters<typeof cancelAppointmentTool.execute>[0]
-        );
-        break;
-
-      default:
-        if (allowSelfModification && _selfEvolutionTool && name === _selfEvolutionTool.name) {
-          await _selfEvolutionTool.execute(args);
-          result = "Evolução iniciada.";
-          break;
-        }
-        if (allowSelfModification && _autonomousTool && name === _autonomousTool.name) {
-          result = await _autonomousTool.execute(
-            args as Parameters<typeof _autonomousTool.execute>[0]
-          );
-          break;
-        }
-        // MCP fallthrough
-        result = await mcpManager.callTool(name, args);
-    }
-
-    if (!LOG_BLOCKLIST.has(name)) {
-      toolsLogQueries.log(
-        name,
-        sanitizeForLog(args),
-        sanitizeForLog(result),
-        Date.now() - start,
-        sessionId
-      );
-    }
+    const result = await mcpManager.callTool(name, args);
+    toolsLogQueries.log(
+      name,
+      sanitizeForLog(args),
+      sanitizeForLog(result),
+      Date.now() - start,
+      sessionId
+    );
     return result;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    if (!LOG_BLOCKLIST.has(name)) {
-      toolsLogQueries.log(
-        name,
-        sanitizeForLog(args),
-        { error: errorMsg },
-        Date.now() - start,
-        sessionId
-      );
-    }
-    console.error(`[Registry] Tool "${name}" failed:`, error);
+    toolsLogQueries.log(
+      name,
+      sanitizeForLog(args),
+      { error: errorMsg },
+      Date.now() - start,
+      sessionId
+    );
+    console.error(`[Registry] MCP tool "${name}" failed:`, error);
     return `Ferramenta "${name}" falhou: ${errorMsg}`;
   }
 }
 
-export const toolRegistry = { getDeclarations, execute, initSelfModificationTools };
+/**
+ * @deprecated Use initRegistry() instead. Kept for backward compatibility during transition.
+ */
+async function initSelfModificationTools(): Promise<void> {
+  // Self-modification tools are now loaded via the system skill in initRegistry()
+  if (!allowSelfModification) return;
+  console.log(
+    "[Registry] Self-modification tools will be loaded via system skill in initRegistry()."
+  );
+}
+
+/**
+ * Adds a skill at runtime (used by external skills loader and evolve_agent).
+ */
+function registerSkill(skill: Skill): void {
+  for (const tool of skill.tools) {
+    _toolMap.set(tool.name, tool);
+  }
+  console.log(
+    `[Registry] Registered skill "${skill.name}" with ${skill.tools.length} tool(s) at runtime.`
+  );
+}
+
+export const toolRegistry = {
+  getDeclarations,
+  execute,
+  initRegistry,
+  initSelfModificationTools,
+  registerSkill,
+};

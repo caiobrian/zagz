@@ -12,6 +12,7 @@ import makeWASocket, {
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import { agentCore } from "../agent/core.js";
+import type { MessageChannel } from "./types.js";
 
 const logger = pino({ level: "silent" });
 
@@ -154,4 +155,25 @@ export async function startWhatsApp(): Promise<WASocket> {
   });
 
   return sock;
+}
+
+/**
+ * WhatsApp channel implementing the MessageChannel interface.
+ */
+export class WhatsAppChannel implements MessageChannel {
+  name = "whatsapp";
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onMessage(_handler: (text: string) => Promise<string>): void {
+    // WhatsApp channel uses agentCore directly via startWhatsApp()
+    // The handler is stored at the index.ts level and not needed here
+  }
+
+  async sendMessage(text: string): Promise<void> {
+    await sendWhatsAppMessage(text);
+  }
+
+  async start(): Promise<void> {
+    await startWhatsApp();
+  }
 }

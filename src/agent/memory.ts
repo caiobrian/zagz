@@ -1,6 +1,15 @@
 import { type Memory, memoriesQueries } from "../db/queries/memories.js";
 
-export type MemoryCategory = "finance" | "projects" | "preferences" | "routine" | string;
+export type MemoryCategory =
+  | "finance"
+  | "projects"
+  | "preferences"
+  | "routine"
+  | "location"
+  | "episodic" // dated events ("went to cinema on day X")
+  | "context" // temporary context (expires in 24h conceptually)
+  | "preference" // auto-discovered preferences
+  | string;
 
 export const memoryService = {
   set(key: string, value: unknown, category?: MemoryCategory): void {

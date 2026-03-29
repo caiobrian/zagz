@@ -92,6 +92,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_purchases_status ON purchases(status);
   CREATE INDEX IF NOT EXISTS idx_appointments_scheduled ON appointments(scheduled_at);
   CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+
+  CREATE TABLE IF NOT EXISTS agent_evolution_log (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    action           TEXT NOT NULL,
+    description      TEXT NOT NULL,
+    author           TEXT NOT NULL,
+    snapshot_before  TEXT,
+    snapshot_after   TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_evolution_timestamp ON agent_evolution_log(timestamp DESC);
 `);
 
 export default db;
