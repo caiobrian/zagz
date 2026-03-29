@@ -1,6 +1,13 @@
 import { placesSearchTool } from './placesSearch.js';
 import { tavilySearchTool } from './tavilySearch.js';
 import { memoryReadTool, memoryWriteTool, cronManageTool } from './memory-tool.js';
+import {
+  getPaymentCredentialsTool,
+  initiatePurchaseTool,
+  confirmPurchaseTool,
+  completePurchaseTool,
+  cancelPurchaseTool,
+} from './paymentTool.js';
 import { mcpManager } from '../mcp/client.js';
 import { toolsLogQueries } from '../db/queries/tools.js';
 
@@ -22,6 +29,11 @@ function getDeclarations(): ToolDeclaration[] {
     { name: memoryReadTool.name, description: memoryReadTool.description, parameters: memoryReadTool.parameters as Record<string, unknown> },
     { name: memoryWriteTool.name, description: memoryWriteTool.description, parameters: memoryWriteTool.parameters as Record<string, unknown> },
     { name: cronManageTool.name, description: cronManageTool.description, parameters: cronManageTool.parameters as Record<string, unknown> },
+    { name: getPaymentCredentialsTool.name, description: getPaymentCredentialsTool.description, parameters: getPaymentCredentialsTool.parameters as Record<string, unknown> },
+    { name: initiatePurchaseTool.name, description: initiatePurchaseTool.description, parameters: initiatePurchaseTool.parameters as Record<string, unknown> },
+    { name: confirmPurchaseTool.name, description: confirmPurchaseTool.description, parameters: confirmPurchaseTool.parameters as Record<string, unknown> },
+    { name: completePurchaseTool.name, description: completePurchaseTool.description, parameters: completePurchaseTool.parameters as Record<string, unknown> },
+    { name: cancelPurchaseTool.name, description: cancelPurchaseTool.description, parameters: cancelPurchaseTool.parameters as Record<string, unknown> },
   ];
 
   if (allowSelfModification) {
@@ -87,6 +99,26 @@ async function execute(name: string, args: Record<string, unknown>, sessionId?: 
 
       case cronManageTool.name:
         result = cronManageTool.execute(args as Parameters<typeof cronManageTool.execute>[0]);
+        break;
+
+      case getPaymentCredentialsTool.name:
+        result = getPaymentCredentialsTool.execute();
+        break;
+
+      case initiatePurchaseTool.name:
+        result = initiatePurchaseTool.execute(args as Parameters<typeof initiatePurchaseTool.execute>[0]);
+        break;
+
+      case confirmPurchaseTool.name:
+        result = confirmPurchaseTool.execute(args as Parameters<typeof confirmPurchaseTool.execute>[0]);
+        break;
+
+      case completePurchaseTool.name:
+        result = completePurchaseTool.execute(args as Parameters<typeof completePurchaseTool.execute>[0]);
+        break;
+
+      case cancelPurchaseTool.name:
+        result = cancelPurchaseTool.execute(args as Parameters<typeof cancelPurchaseTool.execute>[0]);
         break;
 
       default:

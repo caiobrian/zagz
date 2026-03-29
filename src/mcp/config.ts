@@ -9,6 +9,10 @@ export const mcpServersConfig: { mcpServers: Record<string, MCPServerConfig> } =
     "filesystem": {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-filesystem", process.cwd()]
+    },
+    "playwright": {
+      command: "npx",
+      args: ["-y", "@playwright/mcp@latest", "--headless"]
     }
   }
 };
